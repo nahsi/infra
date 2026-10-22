@@ -20,7 +20,6 @@ spec:
           main:
             image:
               repository: ghcr.io/sw-carlos-cristobal/sharetab
-              # Stable image includes the nullable receipt date/store-name fix.
               tag: stable@sha256:1cf3a50641b56ae3a6e43cc9da77984f06b0b15c8063550c8430a5d8bade9f41
             envFrom:
               # sharetab-app (deps/secret-app.yml, SOPS-encrypted): AUTH_SECRET,
