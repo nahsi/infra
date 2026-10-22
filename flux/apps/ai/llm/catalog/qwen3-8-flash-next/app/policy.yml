@@ -22,10 +22,6 @@ spec:
                 toJson(r.filterKeys(k, k != "response_format").merge({
                   "model": "Qwen/Qwen3.8-Flash-Next",
                   "reasoning_effort": "none",
-                  "temperature": 0.7,
-                  "top_p": 0.8,
-                  "top_k": 20,
-                  "presence_penalty": 1.5,
                   "messages": [{
                     "role": "system",
                     "content": "Return only valid JSON matching the requested receipt structure, without markdown. Omit date and merchantName when unknown; never use null for these fields. All monetary values must be non-negative integers in cents."
