@@ -12,8 +12,6 @@ spec:
       conditional:
       # ShareTab sends JSON mode with images, which Halogen rejects. Keep its
       # compatibility changes on a dedicated alias; JSON remains prompt-only.
-      # First match wins, so this entry sets its own sampling: greedy decoding
-      # keeps receipt line amounts stable.
       - condition: |-
           request.method == "POST" && request.path == "/v1/chat/completions" &&
           json(request.body).model == "sharetab-receipt"
