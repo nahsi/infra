@@ -12,6 +12,8 @@ spec:
       conditional:
       # ShareTab sends JSON mode with images, which Halogen rejects. Keep its
       # compatibility changes on a dedicated alias; JSON remains prompt-only.
+      # First match wins, so this entry sets its own sampling: greedy decoding
+      # keeps receipt line amounts stable.
       - condition: |-
           request.method == "POST" && request.path == "/v1/chat/completions" &&
           json(request.body).model == "sharetab-receipt"
@@ -22,6 +24,8 @@ spec:
                 toJson(r.filterKeys(k, k != "response_format").merge({
                   "model": "Qwen/Qwen3.8-Flash-Next",
                   "reasoning_effort": "none",
+                  "temperature": 0,
+                  "presence_penalty": 0,
                   "messages": [{
                     "role": "system",
                     "content": "Return only valid JSON matching the requested receipt structure, without markdown. All monetary values must be non-negative integers in cents."
