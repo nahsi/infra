@@ -130,7 +130,8 @@ spec:
               HINDSIGHT_API_EMBEDDINGS_OPENAI_MODEL: Qwen/Qwen3-Embedding-0.6B
               HINDSIGHT_API_EMBEDDINGS_OPENAI_API_KEY: *inferenceApiKey
               HINDSIGHT_API_EMBEDDINGS_OPENAI_BATCH_SIZE: "1"
-              HINDSIGHT_API_EMBEDDINGS_MAX_INPUT_TOKENS: "4096"
+              # The embedding client timeout is a fixed 60s and TEI embeds ~45 tokens/s.
+              HINDSIGHT_API_EMBEDDINGS_MAX_INPUT_TOKENS: "1024"
               HINDSIGHT_API_EMBEDDINGS_QUERY_PREFIX: "Instruct: Given a query, retrieve relevant passages that answer the query.\nQuery: "
               HINDSIGHT_API_EMBEDDINGS_MAX_CONCURRENT_REQUESTS: "2"
 
