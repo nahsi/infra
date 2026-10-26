@@ -24,7 +24,7 @@ spec:
           image: docker.io/nahsilabs/realtimestt:1.1.2-openai-3b52530@sha256:5ee7773ad43b15c5d9412bf389e8d9582ef186a7bca1b30c7df2a16238160254
           args:
             - --host
-            - 0.0.0.0
+            - 127.0.0.1
             - --port
             - "8010"
             # GigaAM v3 is a NeMo transducer, so it loads through the Parakeet backend with
@@ -56,21 +56,30 @@ spec:
             - name: native
               containerPort: 8010
           startupProbe:
-            httpGet:
-              path: /api/v1/live
-              port: native
+            exec:
+              command:
+                - python
+                - -c
+                - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/api/v1/live', timeout=2)
             periodSeconds: 5
+            timeoutSeconds: 3
             failureThreshold: 60
           readinessProbe:
-            httpGet:
-              path: /api/v1/ready
-              port: native
+            exec:
+              command:
+                - python
+                - -c
+                - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/api/v1/ready', timeout=2)
             periodSeconds: 5
+            timeoutSeconds: 3
           livenessProbe:
-            httpGet:
-              path: /api/v1/live
-              port: native
+            exec:
+              command:
+                - python
+                - -c
+                - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/api/v1/live', timeout=2)
             periodSeconds: 30
+            timeoutSeconds: 3
           resources:
             requests:
               cpu: 500m
