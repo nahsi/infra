@@ -1,0 +1,166 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: realtimestt-ru
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    spec:
+      terminationGracePeriodSeconds: 30
+      nodeSelector:
+        node.nahsilabs/cpu: fast
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: server
+          image: docker.io/nahsilabs/realtimestt:1.1.2-openai-3b52530@sha256:5ee7773ad43b15c5d9412bf389e8d9582ef186a7bca1b30c7df2a16238160254
+          args:
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8010"
+            # GigaAM v3 is a NeMo transducer, so it loads through the Parakeet backend with
+            # GigaAM's 64 mel features and file names.
+            - --engine
+            - sherpa_onnx_parakeet
+            - --model
+            - sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16
+            - --engine-options
+            - '{"provider":"cpu","num_threads":4,"feature_dim":64,"model_type":"nemo_transducer","files":{"decoder":"decoder.onnx","joiner":"joiner.onnx"}}'
+            - --use-main-model-for-realtime
+            - --download-root
+            - /models
+            - --device
+            - cpu
+            - --language
+            - ru
+            - --beam-size
+            - "1"
+            - --batch-size
+            - "1"
+            - --max-sessions
+            - "2"
+            - --max-active-speakers
+            - "2"
+            - --log-level
+            - INFO
+          ports:
+            - name: native
+              containerPort: 8010
+          startupProbe:
+            httpGet:
+              path: /api/v1/live
+              port: native
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /api/v1/ready
+              port: native
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/v1/live
+              port: native
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "4"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: models
+              mountPath: /models
+              readOnly: true
+            - name: server-home
+              mountPath: /home/realtimestt
+            - name: server-tmp
+              mountPath: /tmp
+        - name: adapter
+          image: docker.io/nahsilabs/realtimestt:1.1.2-openai-3b52530@sha256:5ee7773ad43b15c5d9412bf389e8d9582ef186a7bca1b30c7df2a16238160254
+          command:
+            - /opt/venv/bin/uvicorn
+          args:
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8000"
+            - --app-dir
+            - /app
+            - openai_adapter:app
+          env:
+            - name: NATIVE_SERVER_URL
+              value: http://127.0.0.1:8010
+            - name: MODEL_NAME
+              value: ai-sage/GigaAM-v3
+            - name: DEFAULT_LANGUAGE
+              value: ru
+          ports:
+            - name: http
+              containerPort: 8000
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 100m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: adapter-home
+              mountPath: /home/realtimestt
+            - name: adapter-tmp
+              mountPath: /tmp
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: realtimestt-ru-models
+        - name: server-home
+          emptyDir:
+            sizeLimit: 256Mi
+        - name: server-tmp
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: adapter-home
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: adapter-tmp
+          emptyDir:
+            sizeLimit: 1Gi
