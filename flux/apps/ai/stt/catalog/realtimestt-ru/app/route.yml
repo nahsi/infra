@@ -1,0 +1,27 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: realtimestt-ru-ai
+spec:
+  parentRefs:
+    - name: agenticgateway-internal
+      namespace: agenticgateway
+      sectionName: https
+  hostnames:
+    - ai.nahsi.dev
+  rules:
+    - name: transcription
+      matches:
+        - path:
+            type: Exact
+            value: /ru/v1/audio/transcriptions
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplaceFullPath
+              replaceFullPath: /v1/audio/transcriptions
+      backendRefs:
+        - kind: Service
+          name: realtimestt-ru
+          port: 8000

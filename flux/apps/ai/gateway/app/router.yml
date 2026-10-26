@@ -41,7 +41,11 @@ spec:
       name: qwen3-tts-ai
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: realtimestt-ai
+      name: realtimestt-multilingual-ai
+      sectionName: transcription
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: realtimestt-ru-ai
       sectionName: transcription
   traffic:
     timeouts:

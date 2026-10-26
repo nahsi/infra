@@ -26,9 +26,8 @@ spec:
               WYOMING_URI: tcp://0.0.0.0:10300
               WYOMING_LOG_LEVEL: INFO
               WYOMING_LANGUAGES: 'en ru'
-              STT_OPENAI_URL: https://ai.nahsi.dev/v1
-              STT_MODELS: nvidia/nemotron-3.5-asr-streaming-0.6b
-              STT_REALTIME_MODELS: nvidia/nemotron-3.5-asr-streaming-0.6b
+              STT_OPENAI_URL: https://ai.nahsi.dev/ru/v1
+              STT_MODELS: ai-sage/GigaAM-v3
               TTS_OPENAI_URL: https://ai.nahsi.dev/v1
               TTS_MODELS: Qwen/Qwen3-TTS
               TTS_STREAMING_MODELS: Qwen/Qwen3-TTS

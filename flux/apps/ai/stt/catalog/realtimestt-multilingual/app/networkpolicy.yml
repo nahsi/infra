@@ -1,12 +1,11 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
-  name: realtimestt-lockdown
-  namespace: ai
+  name: realtimestt-multilingual-lockdown
 spec:
   endpointSelector:
     matchLabels:
-      app.kubernetes.io/name: realtimestt
+      app.kubernetes.io/name: realtimestt-multilingual
   ingress:
     - fromEntities:
         - host
