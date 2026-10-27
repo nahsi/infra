@@ -129,7 +129,7 @@ spec:
         existingClaim: proba-home
   initContainers:
     - name: telegram-volume-permissions
-      image: &telegram-image docker.io/aiogram/telegram-bot-api:latest@sha256:3f92ea1b5fcb27344d991ab1464af08675a2e202f901c68fccdf570d77ec02bf
+      image: &telegram-image docker.io/aiogram/telegram-bot-api:latest@sha256:8de108590ad6bfd7754deccb47eb04d3cbf1fadb884e983e39286aeaa2b09ed4
       command: ["chown", "10000:10000", "/var/lib/telegram-bot-api"]
       securityContext:
         runAsUser: 0
