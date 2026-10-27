@@ -22,7 +22,7 @@ spec:
           main:
             image:
               repository: ghcr.io/radiatingreverberations/comfyui-extensions
-              tag: v0.38.0@sha256:e30f258995addfabd2313da34b1ed63e39ec42273ac1a956f3fcfce0aae1320b
+              tag: v0.43.0@sha256:79f01b7dca82381d8c1086428274474a38d66ad9616c16b8100079b0372d89bd
             args:
               - --multi-user
               - --disable-metadata
