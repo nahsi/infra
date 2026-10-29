@@ -22,6 +22,16 @@
       "datasourceTemplate": "docker"
     },
     {
+      "description": "ECK Elasticsearch version",
+      "customType": "regex",
+      "managerFilePatterns": ["/flux/.+\\.ya?ml$/"],
+      "matchStrings": [
+        "kind:\\s+Elasticsearch\\s*\\n(?:.*\\n)*?\\s+version:\\s+(?<currentValue>\\S+)"
+      ],
+      "depNameTemplate": "docker.elastic.co/elasticsearch/elasticsearch",
+      "datasourceTemplate": "docker"
+    },
+    {
       "description": "Kustomization github ?ref= URLs",
       "customType": "regex",
       "managerFilePatterns": ["/flux/.+/kustomization\\.ya?ml$/"],
@@ -88,6 +98,11 @@
       "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-[a-f0-9]+$",
       "automerge": true,
       "ignoreTests": true
+    },
+    {
+      "description": "RAGFlow ships the Elasticsearch v8 Go client",
+      "matchPackageNames": ["docker.elastic.co/elasticsearch/elasticsearch"],
+      "allowedVersions": "<9"
     },
     {
       "description": "Authentik provider 2026.8+ requires explicit token configuration",

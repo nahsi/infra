@@ -1,0 +1,144 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ragflow
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: app-template
+      version: 5.2.1
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  values:
+    controllers:
+      main:
+        strategy: Recreate
+        containers:
+          main:
+            image:
+              repository: infiniflow/ragflow
+              tag: nightly@sha256:b1e9c7cd844eb9cbef429afcd6c012f31049fd453bdef67fdacbfc40a083b466
+            args:
+              - --enable-adminserver
+            env:
+              TZ: UTC
+              DB_TYPE: mysql
+              DOC_ENGINE: elasticsearch
+              STORAGE_IMPL: s3
+              ENABLE_REGISTER: "0"
+              TOKENIZER_EMBEDDING_BATCH_SIZE: "1"
+              MAX_CONCURRENT_CHATS: "2"
+              KC_COMPILE_CONCURRENCY: "2"
+              AGENTIC_RAG_CONFIG: /ragflow/conf/agentic/agentic_rag.yaml
+              MYSQL_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: ragflow-mariadb-user
+                    key: password
+              REDIS_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: ragflow-valkey-auth
+                    key: default
+              S3_ACCESS_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: ragflow-s3-auth
+                    key: access_key
+              S3_SECRET_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: ragflow-s3-auth
+                    key: secret_key
+              ES_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: ragflow-es-elastic-user
+                    key: elastic
+            probes:
+              startup:
+                enabled: true
+                type: HTTP
+                path: /api/v1/system/healthz
+                port: 9380
+                spec:
+                  failureThreshold: 60
+                  periodSeconds: 5
+              liveness:
+                enabled: true
+                type: HTTP
+                path: /api/v1/system/healthz
+                port: 9380
+              readiness:
+                enabled: true
+                type: HTTP
+                path: /api/v1/system/healthz
+                port: 9380
+            resources:
+              requests:
+                cpu: 500m
+                memory: 2Gi
+              limits:
+                memory: 8Gi
+    service:
+      main:
+        controller: main
+        ports:
+          http:
+            port: 80
+    persistence:
+      config:
+        type: configMap
+        name: ragflow-config
+        globalMounts:
+          - path: /ragflow/conf/service_conf.yaml.template
+            subPath: service_conf.yaml.template
+            readOnly: true
+      agentic-rag:
+        type: configMap
+        name: ragflow-agentic-rag
+        globalMounts:
+          - path: /ragflow/conf/agentic
+            readOnly: true
+    route:
+      main:
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Knowledge
+          gethomepage.dev/name: RAGFlow
+          gethomepage.dev/href: https://ragflow.nahsi.dev
+          gethomepage.dev/icon: https://raw.githubusercontent.com/infiniflow/ragflow/v1.0.0-rc2/web/public/logo.svg
+          gethomepage.dev/pod-selector: "app.kubernetes.io/name=ragflow"
+        parentRefs:
+          - name: private-gateway
+            namespace: envoy-gateway
+            sectionName: https
+        hostnames:
+          - ragflow.nahsi.dev
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /admin
+              - path:
+                  type: PathPrefix
+                  value: /api/v1/admin
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: gateway.envoyproxy.io
+                  kind: HTTPRouteFilter
+                  name: ragflow-admin-deny
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            timeouts:
+              request: 600s
+              backendRequest: 600s
+            backendRefs:
+              - identifier: main
+                port: 80
