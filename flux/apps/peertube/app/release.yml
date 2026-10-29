@@ -88,6 +88,7 @@ spec:
               PEERTUBE_TRANSCODING_ENABLED: "true"
               PEERTUBE_TRANSCODING_CONCURRENCY: "1"
               PEERTUBE_TRANSCODING_THREADS: "4"
+              PEERTUBE_TRANSCODING_PROFILE: vaapi
               PEERTUBE_TRANSCODING_WEB_VIDEOS_ENABLED: "false"
               PEERTUBE_TRANSCODING_HLS_ENABLED: "true"
               PEERTUBE_TRANSCODING_ORIGINAL_FILE_KEEP: "true"
@@ -98,7 +99,7 @@ spec:
               PEERTUBE_TRANSCODING_480P: "true"
               PEERTUBE_TRANSCODING_720P: "true"
               PEERTUBE_TRANSCODING_1080P: "true"
-              PEERTUBE_TRANSCODING_1440P: "false"
+              PEERTUBE_TRANSCODING_1440P: "true"
               PEERTUBE_TRANSCODING_2160P: "false"
             resources:
               requests:
@@ -106,6 +107,7 @@ spec:
                 memory: 1Gi
               limits:
                 memory: 4Gi
+                gpu.intel.com/i915: "1"
     service:
       main:
         controller: main
