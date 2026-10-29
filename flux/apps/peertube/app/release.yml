@@ -19,6 +19,7 @@ spec:
         runAsGroup: 999
         fsGroup: 999
         fsGroupChangePolicy: OnRootMismatch
+
     controllers:
       main:
         strategy: Recreate
@@ -27,55 +28,48 @@ spec:
             image:
               repository: docker.io/chocobozzz/peertube
               tag: v8.3.2@sha256:83d7cfa521a104487644f3c78bfa4723863c825d6eb47f60d3e798ec922b0a7d
+
             command:
               - /bin/sh
               - -c
               - mkdir -p /data/config && exec /usr/local/bin/entrypoint.sh node dist/server
+
             env:
               TZ: Europe/Athens
               NODE_CONFIG_DIR: /app/config:/app/support/docker/production/config:/config:/data/config
               PEERTUBE_LOCAL_CONFIG: /data/config
+
               PEERTUBE_WEBSERVER_HOSTNAME: tube.nahsi.dev
               PEERTUBE_ADMIN_EMAIL: peertube@nahsi.dev
               PEERTUBE_SECRET:
                 valueFrom:
-                  secretKeyRef:
-                    name: peertube
-                    key: secret
+                  secretKeyRef: { name: peertube, key: secret }
               PT_INITIAL_ROOT_PASSWORD:
                 valueFrom:
-                  secretKeyRef:
-                    name: peertube
-                    key: root_password
+                  secretKeyRef: { name: peertube, key: root_password }
+
               PEERTUBE_DB_HOSTNAME:
                 valueFrom:
-                  secretKeyRef:
-                    name: pg-peertube-app
-                    key: host
+                  secretKeyRef: { name: pg-peertube-app, key: host }
               PEERTUBE_DB_PORT:
                 valueFrom:
-                  secretKeyRef:
-                    name: pg-peertube-app
-                    key: port
+                  secretKeyRef: { name: pg-peertube-app, key: port }
               PEERTUBE_DB_NAME:
                 valueFrom:
-                  secretKeyRef:
-                    name: pg-peertube-app
-                    key: dbname
+                  secretKeyRef: { name: pg-peertube-app, key: dbname }
               PEERTUBE_DB_USERNAME:
                 valueFrom:
-                  secretKeyRef:
-                    name: pg-peertube-app
-                    key: username
+                  secretKeyRef: { name: pg-peertube-app, key: username }
               PEERTUBE_DB_PASSWORD:
                 valueFrom:
-                  secretKeyRef:
-                    name: pg-peertube-app
-                    key: password
+                  secretKeyRef: { name: pg-peertube-app, key: password }
+
               PEERTUBE_REDIS_HOSTNAME: peertube-valkey
+
               PEERTUBE_STORAGE_WEB_VIDEOS: /media/web-videos/
               PEERTUBE_STORAGE_STREAMING_PLAYLISTS: /media/streaming-playlists/
               PEERTUBE_STORAGE_ORIGINAL_VIDEO_FILES: /media/original-video-files/
+
               PEERTUBE_SIGNUP_ENABLED: "false"
               PEERTUBE_FEDERATION_ENABLED: "false"
               PEERTUBE_FOLLOWERS_INSTANCE_ENABLED: "false"
@@ -85,13 +79,15 @@ spec:
               PEERTUBE_SEARCH_SEARCH_INDEX_ENABLED: "false"
               PEERTUBE_VIDEO_COMMENTS_ACCEPT_REMOTE_COMMENTS: "false"
               PEERTUBE_LIVE_ENABLED: "false"
+
               PEERTUBE_TRANSCODING_ENABLED: "true"
+              PEERTUBE_TRANSCODING_PROFILE: vaapi
               PEERTUBE_TRANSCODING_CONCURRENCY: "1"
               PEERTUBE_TRANSCODING_THREADS: "4"
-              PEERTUBE_TRANSCODING_PROFILE: vaapi
-              PEERTUBE_TRANSCODING_WEB_VIDEOS_ENABLED: "false"
               PEERTUBE_TRANSCODING_HLS_ENABLED: "true"
+              PEERTUBE_TRANSCODING_WEB_VIDEOS_ENABLED: "false"
               PEERTUBE_TRANSCODING_ORIGINAL_FILE_KEEP: "true"
+
               PEERTUBE_TRANSCODING_RESOLUTIONS_0P: "false"
               PEERTUBE_TRANSCODING_144P: "false"
               PEERTUBE_TRANSCODING_240P: "false"
@@ -101,6 +97,7 @@ spec:
               PEERTUBE_TRANSCODING_1080P: "true"
               PEERTUBE_TRANSCODING_1440P: "true"
               PEERTUBE_TRANSCODING_2160P: "false"
+
             resources:
               requests:
                 cpu: 500m
@@ -108,12 +105,14 @@ spec:
               limits:
                 memory: 4Gi
                 gpu.intel.com/i915: "1"
+
     service:
       main:
         controller: main
         ports:
           http:
             port: 9000
+
     persistence:
       data:
         existingClaim: peertube-data
@@ -123,6 +122,7 @@ spec:
         existingClaim: peertube-media
         globalMounts:
           - path: /media
+
     route:
       main:
         annotations:
