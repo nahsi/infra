@@ -22,6 +22,9 @@ spec:
           supports_vision: true
         fallback_providers: []
         timezone: Europe/Athens
+        sessions:
+          auto_archive: true
+          auto_archive_days: 5
         agent:
           max_turns: null
           image_input_mode: native
