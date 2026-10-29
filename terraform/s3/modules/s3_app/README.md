@@ -16,7 +16,7 @@ provider in `s3_compat_mode` for RustFS compatibility.
 | `minio_s3_bucket_lifecycle` | `<bucket>` | lifecycle rules (if any) |
 | `minio_s3_bucket_cors` | `<bucket>` | cross-origin access rules (if any) |
 | `minio_iam_user` | `<bucket>` | dedicated IAM user |
-| `minio_iam_policy` | `<bucket>` | RW policy scoped to bucket |
+| `minio_iam_policy` | `<bucket>` | RW policy scoped to bucket, plus per-app extra actions |
 | `minio_iam_user_policy_attachment` | — | binds policy to user |
 
 ## Variables
@@ -36,6 +36,7 @@ provider in `s3_compat_mode` for RustFS compatibility.
 | `quota_gib` | `number` | `0` | Hard quota in GiB (0 = no quota) |
 | `lifecycle_rules` | `list` | `[]` | Object expiration rules |
 | `cors_rules` | `list` | `[]` | Browser cross-origin access rules |
+| `policy` | `map` | `{}` | Extra IAM actions for this app's user |
 
 ### lifecycle_rules fields
 
@@ -45,6 +46,15 @@ provider in `s3_compat_mode` for RustFS compatibility.
 | `prefix` | `string` | `""` | Object prefix filter (empty = all objects) |
 | `expiration_days` | `number` | `0` | Delete objects after N days |
 | `abort_incomplete_days` | `number` | `0` | Clean up incomplete multipart uploads after N days |
+
+### policy fields
+
+Actions are added to the base RW set and always scoped to this app's bucket.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `bucket_actions` | `list(string)` | `[]` | Extra actions on the bucket (`arn:aws:s3:::<bucket>`) |
+| `object_actions` | `list(string)` | `[]` | Extra actions on objects (`arn:aws:s3:::<bucket>/*`) |
 
 ### cors_rules fields
 
