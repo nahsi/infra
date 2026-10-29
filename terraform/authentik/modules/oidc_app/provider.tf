@@ -5,6 +5,14 @@ resource "random_id" "client_id" {
 locals {
   entitlement_scope_ids    = length(var.entitlements) > 0 ? [var.oidc_defaults.entitlement_scope_id] : []
   offline_access_scope_ids = var.offline_access ? [var.oidc_defaults.offline_access_scope_id] : []
+  claims_scope_ids         = authentik_property_mapping_provider_scope.claims[*].id
+}
+
+resource "authentik_property_mapping_provider_scope" "claims" {
+  count      = var.claims_expression != "" ? 1 : 0
+  name       = "${var.app_name} claims"
+  scope_name = var.app_name
+  expression = var.claims_expression
 }
 
 resource "authentik_provider_oauth2" "this" {
@@ -24,7 +32,7 @@ resource "authentik_provider_oauth2" "this" {
   include_claims_in_id_token = true
   property_mappings = sort(distinct(concat(
     var.oidc_defaults.default_scope_ids,
-    sort(tolist(var.additional_scope_mapping_ids)),
+    local.claims_scope_ids,
     local.entitlement_scope_ids,
     local.offline_access_scope_ids,
   )))

@@ -116,16 +116,11 @@ variable "offline_access" {
   nullable    = false
 }
 
-variable "additional_scope_mapping_ids" {
-  description = "Additional authentik scope mapping IDs, not OAuth scope names."
-  type        = set(string)
-  default     = []
+variable "claims_expression" {
+  description = "Authentik Python expression returning extra claims, released under the scope named after the app."
+  type        = string
+  default     = ""
   nullable    = false
-
-  validation {
-    condition     = alltrue([for id in var.additional_scope_mapping_ids : trimspace(id) != ""])
-    error_message = "Additional scope mapping IDs must not be empty."
-  }
 }
 
 variable "entitlements" {
