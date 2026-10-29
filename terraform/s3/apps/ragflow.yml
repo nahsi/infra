@@ -1,0 +1,9 @@
+acl: private
+versioning: false
+force_destroy: false
+lifecycle_rules:
+  - id: abort-incomplete-uploads
+    abort_incomplete_days: 7
+policy:
+  object_actions:
+    - s3:DeleteObjectVersion

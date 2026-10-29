@@ -1,0 +1,35 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ragflow-nats
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: nats
+      version: 2.15.1
+      sourceRef:
+        kind: HelmRepository
+        name: nats
+        namespace: flux-system
+  values:
+    fullnameOverride: ragflow-nats
+    config:
+      cluster:
+        enabled: false
+      jetstream:
+        enabled: true
+        fileStore:
+          pvc:
+            size: 5Gi
+            storageClassName: ceph-rbd-retain
+    natsBox:
+      enabled: false
+    container:
+      merge:
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            memory: 512Mi

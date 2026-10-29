@@ -1,0 +1,52 @@
+general:
+  heartbeat_interval: 3s
+  database: mysql
+  doc_engine: elasticsearch
+  storage_engine: s3
+  cache_engine: redis
+  queue_engine: nats
+api:
+  host: 0.0.0.0
+  http_port: 9380
+admin:
+  host: 127.0.0.1
+  http_port: 9381
+mysql:
+  name: ragflow
+  user: ragflow
+  password: '${MYSQL_PASSWORD:-unset}'
+  host: ragflow-mariadb
+  port: 3306
+  max_connections: 100
+  stale_timeout: 300
+  max_allowed_packet: 268435456
+s3:
+  access_key: '${S3_ACCESS_KEY:-unset}'
+  secret_key: '${S3_SECRET_KEY:-unset}'
+  region_name: us-east-1
+  endpoint_url: https://s3.nahsi.dev:9000
+  bucket: ragflow
+  prefix_path: ''
+  signature_version: v4
+  addressing_style: path
+es:
+  hosts: https://ragflow-es-http:9200
+  username: elastic
+  password: '${ES_PASSWORD:-unset}'
+kvrocks:
+  db: 1
+  username: ''
+  password: '${REDIS_PASSWORD:-unset}'
+  host: ragflow-valkey:6379
+nats:
+  host: ragflow-nats
+  port: 4222
+otel:
+  enable: false
+ingestor:
+  mq_type: nats
+  max_concurrent_workers: 1
+  page_concurrency: 2
+  compiler_pool_size: 0
+file_syncer:
+  max_concurrent_syncs: 5

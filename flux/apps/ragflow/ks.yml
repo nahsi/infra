@@ -1,0 +1,49 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: app-ragflow-deps
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: infra-mariadb-operator
+    - name: infra-eck-operator
+  path: ./flux/apps/ragflow/deps
+  targetNamespace: ragflow
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: infra
+    namespace: flux-system
+  interval: 1h
+  retryInterval: 2m
+  timeout: 15m
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: app-ragflow
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: app-ragflow-deps
+    - name: infra-gateway-api-crds
+  path: ./flux/apps/ragflow/app
+  targetNamespace: ragflow
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: infra
+    namespace: flux-system
+  interval: 1h
+  retryInterval: 2m
+  timeout: 15m
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age

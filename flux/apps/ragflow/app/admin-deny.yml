@@ -1,0 +1,11 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: ragflow-admin-deny
+spec:
+  directResponse:
+    contentType: text/plain
+    statusCode: 404
+    body:
+      type: Inline
+      inline: "Not Found"

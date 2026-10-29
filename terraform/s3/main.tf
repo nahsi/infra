@@ -16,7 +16,7 @@ terraform {
 }
 
 provider "minio" {
-  minio_server = "s3.nahsi.dev:9000"
-  minio_ssl    = true
+  minio_server   = "s3.nahsi.dev:9000"
+  minio_ssl      = true
   s3_compat_mode = true
 }

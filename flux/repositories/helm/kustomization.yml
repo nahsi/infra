@@ -22,6 +22,8 @@ resources:
   - piraeus.yml
   - external-secrets.yml
   - valkey.yml
+  - nats.yml
   - authentik.yml
   - grafana-community.yml
   - browsertrix.yml
+  - elastic.yml

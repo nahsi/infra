@@ -96,23 +96,13 @@ resource "minio_iam_policy" "this" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = [
-          "s3:GetBucketLocation",
-          "s3:ListBucket",
-          "s3:ListBucketMultipartUploads",
-        ]
+        Effect   = "Allow"
+        Action   = local.bucket_actions
         Resource = minio_s3_bucket.this.arn
       },
       {
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject",
-          "s3:AbortMultipartUpload",
-          "s3:ListMultipartUploadParts",
-        ]
+        Effect   = "Allow"
+        Action   = local.object_actions
         Resource = "${minio_s3_bucket.this.arn}/*"
       },
     ]
