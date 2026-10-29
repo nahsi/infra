@@ -1,0 +1,8 @@
+launch_url: https://tube.nahsi.dev
+ui_group: Media
+redirect_uris:
+  - https://tube.nahsi.dev/plugins/auth-openid-connect/router/code-cb
+allowed_groups:
+  - access:peertube
+claims_expression: |
+  return {"peertube_role": 0 if ak_is_group_member(request.user, name="admins") else 2}

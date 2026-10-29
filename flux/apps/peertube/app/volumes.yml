@@ -1,0 +1,53 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: peertube-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ceph-rbd-retain
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-peertube-media
+  annotations:
+    pv.kubernetes.io/provisioned-by: nfs.csi.k8s.io
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  mountOptions:
+    - nfsvers=4.1
+    - nconnect=8
+    - noatime
+    - soft
+    - softerr
+    - timeo=50
+    - retrans=3
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: nfs.lan#mnt/storage/media/peertube#peertube
+    volumeAttributes:
+      server: nfs.lan
+      share: /mnt/storage/media/peertube
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: peertube-media
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  volumeName: nfs-peertube-media
+  resources:
+    requests:
+      storage: 1Gi

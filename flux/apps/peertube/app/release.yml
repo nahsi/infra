@@ -1,0 +1,151 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: peertube
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: app-template
+      version: 5.2.1
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  values:
+    defaultPodOptions:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        fsGroupChangePolicy: OnRootMismatch
+    controllers:
+      main:
+        strategy: Recreate
+        containers:
+          main:
+            image:
+              repository: docker.io/chocobozzz/peertube
+              tag: v8.3.2@sha256:83d7cfa521a104487644f3c78bfa4723863c825d6eb47f60d3e798ec922b0a7d
+            command:
+              - /bin/sh
+              - -c
+              - mkdir -p /data/config && exec /usr/local/bin/entrypoint.sh node dist/server
+            env:
+              TZ: Europe/Athens
+              NODE_CONFIG_DIR: /app/config:/app/support/docker/production/config:/config:/data/config
+              PEERTUBE_LOCAL_CONFIG: /data/config
+              PEERTUBE_WEBSERVER_HOSTNAME: tube.nahsi.dev
+              PEERTUBE_ADMIN_EMAIL: peertube@nahsi.dev
+              PEERTUBE_SECRET:
+                valueFrom:
+                  secretKeyRef:
+                    name: peertube
+                    key: secret
+              PT_INITIAL_ROOT_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: peertube
+                    key: root_password
+              PEERTUBE_DB_HOSTNAME:
+                valueFrom:
+                  secretKeyRef:
+                    name: pg-peertube-app
+                    key: host
+              PEERTUBE_DB_PORT:
+                valueFrom:
+                  secretKeyRef:
+                    name: pg-peertube-app
+                    key: port
+              PEERTUBE_DB_NAME:
+                valueFrom:
+                  secretKeyRef:
+                    name: pg-peertube-app
+                    key: dbname
+              PEERTUBE_DB_USERNAME:
+                valueFrom:
+                  secretKeyRef:
+                    name: pg-peertube-app
+                    key: username
+              PEERTUBE_DB_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: pg-peertube-app
+                    key: password
+              PEERTUBE_REDIS_HOSTNAME: peertube-valkey
+              PEERTUBE_STORAGE_WEB_VIDEOS: /media/web-videos/
+              PEERTUBE_STORAGE_STREAMING_PLAYLISTS: /media/streaming-playlists/
+              PEERTUBE_STORAGE_ORIGINAL_VIDEO_FILES: /media/original-video-files/
+              PEERTUBE_SIGNUP_ENABLED: "false"
+              PEERTUBE_FEDERATION_ENABLED: "false"
+              PEERTUBE_FOLLOWERS_INSTANCE_ENABLED: "false"
+              PEERTUBE_FOLLOWERS_CHANNELS_ENABLED: "false"
+              PEERTUBE_SEARCH_REMOTEURI_USERS: "false"
+              PEERTUBE_SEARCH_REMOTEURI_ANONYMOUS: "false"
+              PEERTUBE_SEARCH_SEARCH_INDEX_ENABLED: "false"
+              PEERTUBE_VIDEO_COMMENTS_ACCEPT_REMOTE_COMMENTS: "false"
+              PEERTUBE_LIVE_ENABLED: "false"
+              PEERTUBE_TRANSCODING_ENABLED: "true"
+              PEERTUBE_TRANSCODING_CONCURRENCY: "1"
+              PEERTUBE_TRANSCODING_THREADS: "4"
+              PEERTUBE_TRANSCODING_WEB_VIDEOS_ENABLED: "false"
+              PEERTUBE_TRANSCODING_HLS_ENABLED: "true"
+              PEERTUBE_TRANSCODING_ORIGINAL_FILE_KEEP: "true"
+              PEERTUBE_TRANSCODING_RESOLUTIONS_0P: "false"
+              PEERTUBE_TRANSCODING_144P: "false"
+              PEERTUBE_TRANSCODING_240P: "false"
+              PEERTUBE_TRANSCODING_360P: "false"
+              PEERTUBE_TRANSCODING_480P: "true"
+              PEERTUBE_TRANSCODING_720P: "true"
+              PEERTUBE_TRANSCODING_1080P: "true"
+              PEERTUBE_TRANSCODING_1440P: "false"
+              PEERTUBE_TRANSCODING_2160P: "false"
+            resources:
+              requests:
+                cpu: 500m
+                memory: 1Gi
+              limits:
+                memory: 4Gi
+    service:
+      main:
+        controller: main
+        ports:
+          http:
+            port: 9000
+    persistence:
+      data:
+        existingClaim: peertube-data
+        globalMounts:
+          - path: /data
+      media:
+        existingClaim: peertube-media
+        globalMounts:
+          - path: /media
+    route:
+      main:
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Media
+          gethomepage.dev/name: PeerTube
+          gethomepage.dev/icon: peertube.png
+          gethomepage.dev/pod-selector: "app.kubernetes.io/name=peertube"
+        parentRefs:
+          - name: private-gateway
+            namespace: envoy-gateway
+            sectionName: https
+          - name: public-gateway
+            namespace: envoy-gateway
+            sectionName: https
+        hostnames:
+          - tube.nahsi.dev
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            timeouts:
+              request: 3600s
+              backendRequest: 3600s
+            backendRefs:
+              - identifier: main
+                port: http
