@@ -52,7 +52,7 @@ spec:
           chrome:
             image:
               repository: docker.io/chromedp/headless-shell
-              tag: stable@sha256:f76fce2964611eb1e25b90d906727884db12a8918a6d85a0df2619a9ef845c7c
+              tag: stable@sha256:7bee201478b2f6266aae01243740ee85c16281e32f42d3aed9fdf04f4eace7a1
             command: ["/headless-shell/headless-shell"]
             args:
               - --no-sandbox
