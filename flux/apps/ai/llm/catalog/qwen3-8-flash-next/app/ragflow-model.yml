@@ -1,0 +1,39 @@
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: ragflow-qwen3-8-flash-next
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-llm
+  match:
+    model: ragflow/qwen3.8-flash-next
+  provider: Custom
+  custom:
+    backendRef:
+      kind: Service
+      name: qwen3-8-flash-next
+      port: 8080
+    formats:
+      - type: Completions
+        path: /v1/chat/completions
+  policies:
+    transformations:
+      - field: model
+        expression: '"Qwen/Qwen3.8-Flash-Next"'
+      - field: chat_template_kwargs
+        expression: '{"enable_thinking": false}'
+      - field: temperature
+        expression: |-
+          llmRequest.with(r, has(r.temperature) ? r.temperature : 0.7)
+      - field: top_p
+        expression: |-
+          llmRequest.with(r, has(r.top_p) ? r.top_p : 0.8)
+      - field: top_k
+        expression: "20"
+      - field: presence_penalty
+        expression: "0.0"
+      - field: max_tokens
+        expression: |-
+          llmRequest.with(r, has(r.max_tokens) ? r.max_tokens : 32768)
