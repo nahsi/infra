@@ -93,6 +93,21 @@ spec:
         ports:
           http:
             port: 8096
+      ps2:
+        controller: main
+        forceRename: jellyfin-ps2
+        type: LoadBalancer
+        externalTrafficPolicy: Local
+        allocateLoadBalancerNodePorts: false
+        loadBalancerSourceRanges:
+          - 10.2.10.99/32
+        labels:
+          cilium-bgp-private: "true"
+        annotations:
+          lbipam.cilium.io/ips: "192.168.78.199"
+        ports:
+          http:
+            port: 8096
 
     persistence:
       config:
