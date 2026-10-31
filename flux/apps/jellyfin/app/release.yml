@@ -100,7 +100,7 @@ spec:
         externalTrafficPolicy: Local
         allocateLoadBalancerNodePorts: false
         loadBalancerSourceRanges:
-          - 10.2.10.99/32
+          - 10.2.20.99/32
         labels:
           cilium-bgp-private: "true"
         annotations:
