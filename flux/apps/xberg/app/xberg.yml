@@ -1,14 +1,9 @@
-# Server defaults. POST /extract replaces this whole config when the caller sends a
-# `config` field, so Qwen OCR applies only to requests without one.
 ocr:
   backend: vlm
-  # eng adds no language hint to the VLM prompt; Qwen detects the script itself.
   language: [eng]
   vlm_config:
-    # liter-llm strips the openai/ prefix; the gateway sees Qwen/Qwen3.8-Flash-Next.
     model: openai/Qwen/Qwen3.8-Flash-Next
     base_url: https://ai.nahsi.dev/v1
-    # api_key comes from XBERG_LLM_API_KEY (xberg-secret).
     temperature: 0
     extra_body:
       chat_template_kwargs:
