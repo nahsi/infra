@@ -19,13 +19,3 @@ layout:
   table_model: tatr
 use_layout_for_markdown: true
 include_document_structure: true
-translation:
-  target_lang: el
-  preserve_markup: true
-  llm:
-    model: openai/Qwen/Qwen3.8-Flash-Next
-    base_url: https://ai.nahsi.dev/v1
-    temperature: 0
-    extra_body:
-      chat_template_kwargs:
-        enable_thinking: false
