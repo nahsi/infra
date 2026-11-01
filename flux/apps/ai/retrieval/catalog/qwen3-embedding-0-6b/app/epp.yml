@@ -27,7 +27,7 @@ spec:
             image: 
               repository: ghcr.io/llm-d/llm-d-router-endpoint-picker
               # Temporary development image; replace with a release containing llm-d/llm-d-router#3065.
-              tag: main@sha256:ab80c377e6a28c47cd66226172edae52709ddc14767d91da96b6193e127cc6a3
+              tag: main@sha256:ad7f78df012257ec47ada9a0ae4cebc43ff0f20ddeb7e5d9cd11ae9943e9d74e
             args: 
               - "--pool-name=qwen3-embedding-0-6b"
               - "--pool-namespace=ai"
