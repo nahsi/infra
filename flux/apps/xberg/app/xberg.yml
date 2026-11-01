@@ -19,3 +19,6 @@ layout:
   table_model: tatr
 use_layout_for_markdown: true
 include_document_structure: true
+force_ocr: true
+images:
+  target_dpi: 150
