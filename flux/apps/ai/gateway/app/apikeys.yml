@@ -15,6 +15,7 @@ stringData:
     hermes-heron: ENC[AES256_GCM,data:YJvuGkQM+P5cf8ZoVBolJSgz1Vqz7NNOm+GkWlmxNWkbdjLbpsPq3l4b4zTMOYOjskCUpxHicdlJk/Cy7bP22g==,iv:+a32VuAtBX7McNPLS4peVL3/lpbPP/hluq2bZCPuexI=,tag:kCX0tida7Vo5lDJ59WgX7A==,type:str]
     hermes-gabriel: ENC[AES256_GCM,data:1flGdP+lq/EjZbBcAKmCgM8GTkVoQ/Qn9SO2xPlMtU6k3DuF4niQz2Os0s5WEdu+oVKKmohFcRoBRY8Qdsklhw==,iv:hCGK7zB/8JeFd2GThBgTGHsnuDWgcCFFyx41zYYD3xk=,tag:LUo42OXUcaKWzbkRQC2kog==,type:str]
     ragflow: ENC[AES256_GCM,data:+glhcEv8O1uPvtFKY5oaF/PQUa9qcfV7n9yJTNA3KzqZloVkKiACiQfQUTYhb41ozhuf,iv:3ip2LIKdSWHqFtcuOUATAdFc0zRtJhpWhgFOxPlngrM=,tag:hiAf15Giw3iiHBdyA2O8+A==,type:str]
+    xberg: ENC[AES256_GCM,data:UARHVMTRvJFVM34lQ+g3i/FBzcCLEnCZ6UGYq5m8Rz+fkHlqtzpsmqeDW3n7QS24,iv:zzgISfFd0wOuFXwZa09kcR2l69azk9sghyrhnpiRJvE=,tag:Bae0tYw1HJO1JHwMtlA1RA==,type:str]
 sops:
     age:
         - enc: |
@@ -27,6 +28,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age17kf3tfnhtv36pjscj7mzuv5dc0xjcj388764258uwgad78mzzs2qtu05pw
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-10-29T19:34:43Z"
-    mac: ENC[AES256_GCM,data:x5Rhz7L+Db9iGOizehe9ztYTxJ9aBe66J2zmbo9GllO4/WjLlUmyJS4TwexextR6mrYet0Z71krSrvAd3qEx+zGjixfrU3YL71IhfYa/BVpM4glxE7a3HFoGomn6sHBJONLG/cTa7FGcicMQzz+QukoIgewUNbGMQsQsA8QwlTk=,iv:gf6bUTRLO/EgPCFgAIFPw5TePw14jPuvnSE2jtFStm4=,tag:UMvvmyBaoSRrw2tYTCljOQ==,type:str]
+    lastmodified: "2026-11-01T13:21:59Z"
+    mac: ENC[AES256_GCM,data:EeUEAZGfCepQxUeTpPIL9VQOvOB08CFXKG4Sgscxs9GsijLf8vG7q4TyFv1N5utQh28868F3NVUpft6TSXIHwJmHOXLEeILBi1LU1KStZKxi72SCqbcW8N6jSYnWVypFxpsWKshj86NKPvDNGdbWX8dl5xTApAV23h7xgoHcDQc=,iv:9XO2/56Tgmpn0HNK50jynJRzQA2N16GkO7akvFO+hNY=,tag:hlLabf1zhogV27JTO7yO2w==,type:str]
     version: 3.13.3
