@@ -5,5 +5,4 @@ resources:
   - volumes.yml
   - model.yml
   - networkpolicy.yml
-  - sharetab-model.yml
-  - ragflow-model.yml
+  - aliases

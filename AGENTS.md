@@ -47,6 +47,10 @@ terraform/             Talos cluster + cloud/external resources
 - Group dirs (`repositories`, `infrastructure`, `observability`, `apps`) are kustomize organization that apply the per-component Flux Kustomizations (`ks.yml`) + Helm/OCI sources (`repositories/`).
 - Components reconcile independently; ordering is the explicit `dependsOn` graph between Kustomizations (it crosses group boundaries), not directory order.
 
+## Conventions
+
+- **Model aliases** — a per-client `AgentgatewayModel` lives in the backend model's `app/aliases/<client>.yml`, named `<client>-<model-dir>`, matched as `<client>/<model-id, lowercased>` (e.g. `ragflow/qwen3.8-flash-next`).
+
 ## Commands
 
 - `kubectl kustomize <dir>` — render / validate a component (kustomize ships in kubectl; doesn't decrypt SOPS).

@@ -41,8 +41,7 @@ spec:
               DISABLE_PASSWORD_LOGIN: "true"
               AI_PROVIDER_PRIORITY: openai
               OPENAI_BASE_URL: https://ai.nahsi.dev/v1
-              # Gateway alias for Flash, see qwen3-8-flash-next/app/policy.yml
-              OPENAI_MODEL: sharetab-receipt
+              OPENAI_MODEL: sharetab/qwen3.8-flash-next
             probes:
               startup:
                 enabled: true
