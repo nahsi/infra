@@ -21,7 +21,7 @@ spec:
           main:
             image:
               repository: ghcr.io/hkuds/deeptutor
-              tag: 1.6.15@sha256:602d5dfbac7430e364069ac6672642cb0d764e046d189bf596d9ddc6b775c535
+              tag: 1.7.1@sha256:4982ca6bf43b98431366b43d1fec674a63656db3fbe49ba18c674bb6f19196dd
             env:
               TZ: Europe/Athens
             resources:
