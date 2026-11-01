@@ -8,3 +8,8 @@ ocr:
     extra_body:
       chat_template_kwargs:
         enable_thinking: false
+layout:
+  apply_heuristics: true
+  table_model: tatr
+use_layout_for_markdown: true
+include_document_structure: true
