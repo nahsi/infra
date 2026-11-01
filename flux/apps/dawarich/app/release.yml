@@ -19,7 +19,7 @@ spec:
           app:
             image:
               repository: mirror.gcr.io/freikin/dawarich
-              tag: 1.18.1@sha256:a2b93286a973b2e4b55d6a1ebd8009a65b8624639687ca95e909d0aac27324f5
+              tag: 1.20.0@sha256:18945f609942056e55fb24988229499be7bbe4703177fac662225dad465b021f
             command:
               - web-entrypoint.sh
             args:
@@ -112,7 +112,7 @@ spec:
           sidekiq:
             image:
               repository: mirror.gcr.io/freikin/dawarich
-              tag: 1.18.1@sha256:a2b93286a973b2e4b55d6a1ebd8009a65b8624639687ca95e909d0aac27324f5
+              tag: 1.20.0@sha256:18945f609942056e55fb24988229499be7bbe4703177fac662225dad465b021f
             command:
               - sidekiq-entrypoint.sh
             args:
