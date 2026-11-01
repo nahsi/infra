@@ -14,7 +14,7 @@ spec:
     strategy:
       type: Recreate
     image:
-      tag: "1.1.3@sha256:9f15a7c552c321b75a7c30bc3e8c4cba28ef6f662c440287cc9a8539296f6ef3"
+      tag: "1.3.9@sha256:b935277537ca5f4505793cc0e1c655b23400eb9d6ffc38357581a44bb23fdac6"
     ingress:
       enabled: false
     autoscaling:
