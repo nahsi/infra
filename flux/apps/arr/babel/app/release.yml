@@ -21,7 +21,7 @@ spec:
           main:
             image:
               repository: ghcr.io/hugomossberg/babel
-              tag: v2.5.5-beta@sha256:ba0e1f60545f2070ce604386cbe130e9fd260028a213038c61f9fdc407654ebb
+              tag: v2.5.7-beta@sha256:10b2ed1858b3597dc85d540e1a586067407d183f10b1e6c95f3b095f5f845aaf
 
             env:
               TZ: Europe/Athens
