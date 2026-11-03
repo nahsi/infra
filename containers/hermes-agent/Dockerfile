@@ -14,7 +14,7 @@ ADD https://github.com/vimona3ds/hermes-snapcompact.git#83f6e2b0bedcaddf6e9c5288
 FROM scratch AS humanizer
 ADD https://github.com/ilyautov/humanizer-ru.git#ba8d50c1210b52f572c33b2b890805b68aeda33c /src/
 
-FROM nousresearch/hermes-agent:v0.22.5@sha256:9c5561579f3ffdf333401797094ac3a743738d6c25d40f4331c7bf77b694238d
+FROM nousresearch/hermes-agent:v0.22.6@sha256:d27689bc6e8581ec884a7227c9101fdaebf6c853cff8859020dac14f21452b4d
 
 ARG TARGETARCH
 RUN test "$TARGETARCH" = amd64
