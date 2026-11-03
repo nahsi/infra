@@ -1,0 +1,24 @@
+ocr:
+  backend: vlm
+  language: [eng]
+  vlm_prompt: >-
+    Transcribe this document image as Markdown, preserving its structure exactly:
+    headings as headings, label/value pairs as `**Label:** value` lines, tables as
+    Markdown tables with the same columns and rows, lists as lists. Copy every
+    character verbatim; do not translate, summarise, omit or add anything, including
+    emoji. Describe stamps, seals, signatures, logos and photos in square brackets.
+  vlm_config:
+    model: openai/Qwen/Qwen3.8-Flash-Next
+    base_url: https://ai.nahsi.dev/v1
+    temperature: 0
+    extra_body:
+      chat_template_kwargs:
+        enable_thinking: false
+layout:
+  apply_heuristics: true
+  table_model: tatr
+use_layout_for_markdown: true
+include_document_structure: true
+force_ocr: true
+images:
+  target_dpi: 150
