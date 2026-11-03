@@ -6,6 +6,7 @@ metadata:
   namespace: flux-system
 spec:
   dependsOn:
+    - name: app-ai-gateway
     - name: infra-gateway-api-crds
   path: ./flux/apps/xberg/app
   targetNamespace: xberg
@@ -17,3 +18,7 @@ spec:
   interval: 1h
   retryInterval: 2m
   timeout: 10m
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
