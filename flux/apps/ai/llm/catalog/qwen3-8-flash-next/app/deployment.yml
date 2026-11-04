@@ -167,16 +167,7 @@ spec:
               mountPath: /opt/xilinx/xrt/lib
               readOnly: true
             - name: xrt
-              mountPath: /usr/lib/x86_64-linux-gnu/libxrt_coreutil.so.2
-              subPath: libxrt_coreutil.so.2
-              readOnly: true
-            - name: xrt
-              mountPath: /usr/lib/x86_64-linux-gnu/libxrt_core.so.2
-              subPath: libxrt_core.so.2
-              readOnly: true
-            - name: xrt
-              mountPath: /usr/lib/x86_64-linux-gnu/libxrt_driver_xdna.so.2
-              subPath: libxrt_driver_xdna.so.2
+              mountPath: /opt/xilinx/lib/x86_64-linux-gnu
               readOnly: true
       volumes:
         - name: models
