@@ -5,6 +5,7 @@ resources:
   - clickhouse-operator.yml
   - flux-operator.yml
   - flux-operator-mcp.yml
+  - generic-device-plugin.yml
   - grafana-operator.yml
   - hermes-agent-operator.yml
   - envoy-gateway.yml

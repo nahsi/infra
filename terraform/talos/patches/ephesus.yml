@@ -95,3 +95,13 @@ filesystem:
   type: xfs
 mount:
   disableAccessTime: true
+---
+# Halogen's NPU engine locks the memory the NPU reads and refuses to start below 512 MiB.
+apiVersion: v1alpha1
+kind: CRIBaseRuntimeSpecConfig
+overrides:
+  process:
+    rlimits:
+      - type: RLIMIT_MEMLOCK
+        soft: 18446744073709551615
+        hard: 18446744073709551615

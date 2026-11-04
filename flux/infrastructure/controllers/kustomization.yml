@@ -21,6 +21,7 @@ resources:
   - intel-device-plugins
   - nvidia-operator
   - amd-gpu-operator
+  - generic-device-plugin
   - vm-operator
   - grafana-operator
   - snapshot-controller

@@ -1,0 +1,19 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-generic-device-plugin
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 2m
+  timeout: 15m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: infra-node-feature-discovery
+  targetNamespace: kube-system
+  sourceRef:
+    kind: GitRepository
+    name: infra
+    namespace: flux-system
+  path: ./flux/infrastructure/controllers/generic-device-plugin/app
