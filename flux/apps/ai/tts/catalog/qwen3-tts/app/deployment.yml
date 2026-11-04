@@ -38,6 +38,8 @@ spec:
               value: /models/qwen-tokenizer-12hz-Q8_0.gguf
             - name: MODEL_ALIAS
               value: Qwen/Qwen3-TTS
+            - name: DEFAULT_VOICE
+              value: kai
             - name: MAX_BATCH
               value: "2"
             - name: ONEAPI_DEVICE_SELECTOR

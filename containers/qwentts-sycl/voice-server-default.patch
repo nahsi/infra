@@ -1,0 +1,88 @@
+diff --git a/docker/entrypoint.sh b/docker/entrypoint.sh
+index 1e1b061..abbf4db 100644
+--- a/docker/entrypoint.sh
++++ b/docker/entrypoint.sh
+@@ -11,9 +11,11 @@ LANG=${TTS_LANG:-auto}
+ HOST=${HOST:-0.0.0.0}
+ PORT=${PORT:-8080}
+ ALIAS=${MODEL_ALIAS:-}
++DEFAULT_VOICE=${DEFAULT_VOICE:-}
+ 
+ extra_args=()
+ [ -n "$ALIAS" ] && extra_args+=(--alias "$ALIAS")
++[ -n "$DEFAULT_VOICE" ] && extra_args+=(--voice "$DEFAULT_VOICE")
+ [ -n "$CODEC_CHUNK_DUR" ] && extra_args+=(--codec-chunk-dur "$CODEC_CHUNK_DUR")
+ [ -n "$MAX_BATCH" ] && extra_args+=(--max-batch "$MAX_BATCH")
+ [ "$NO_FA" = "1" ] && extra_args+=(--no-fa)
+diff --git a/tools/tts-server.cpp b/tools/tts-server.cpp
+index adb51d1..ba8e380 100644
+--- a/tools/tts-server.cpp
++++ b/tools/tts-server.cpp
+@@ -54,6 +54,7 @@ static void print_usage(const char * prog) {
+             "  --host <ip>             Listen address (default: 127.0.0.1)\n"
+             "  --port <n>              Listen port (default: 8080)\n"
+             "  --lang <name>           Language label when a request omits one (default: auto)\n"
++            "  --voice <name>          Voice used when a request omits one (default: none)\n"
+             "  --max-batch <n>         Concurrent requests batched on the GPU (default: 1)\n"
+             "  --no-fa                 Disable flash attention\n"
+             "  --clamp-fp16            Clamp hidden states to FP16 range\n"
+@@ -74,6 +75,7 @@ int main(int argc, char ** argv) {
+     const char *  device      = NULL;
+     std::string   model_alias;
+     std::string   lang = "auto";
++    std::string   default_voice;
+     server_config cfg;
+     bool          use_fa          = true;
+     bool          clamp_fp16      = false;
+@@ -98,6 +100,8 @@ int main(int argc, char ** argv) {
+             cfg.port = std::atoi(argv[++i]);
+         } else if (!std::strcmp(arg, "--lang") && i + 1 < argc) {
+             lang = argv[++i];
++        } else if (!std::strcmp(arg, "--voice") && i + 1 < argc) {
++            default_voice = argv[++i];
+         } else if (!std::strcmp(arg, "--no-fa")) {
+             use_fa = false;
+         } else if (!std::strcmp(arg, "--clamp-fp16")) {
+@@ -242,12 +246,13 @@ int main(int argc, char ** argv) {
+     // once; mp3/opus encode it without another float copy. A registered voice
+     // wins over a model speaker of the same name and injects pre-extracted
+     // reference latents. An unknown name is rejected instead of generating
+-    // voiceless.
+-    be.synthesize = [q, &lang, &language_detector](const tts_request & req, const tts_sink & sink, std::string & err) -> int {
++    // voiceless. --voice fills in a request that names no voice.
++    be.synthesize = [q, &lang, &default_voice, &language_detector](const tts_request & req, const tts_sink & sink, std::string & err) -> int {
+         struct qt_tts_params p;
+         qt_tts_default_params(&p);
+         p.text = req.input.c_str();
+         p.lang = tts_language(language_detector, req.input, req.lang.empty() ? lang : req.lang);
++        const std::string & voice = req.voice.empty() ? default_voice : req.voice;
+ 
+         // Copy the registered voice latents out under the lock: the
+         // synthesis may run for seconds while another connection
+@@ -257,9 +262,9 @@ int main(int argc, char ** argv) {
+         std::string          voice_ref_text;
+         int                  voice_ref_T = 0;
+         bool                 have_voice  = false;
+-        if (!req.voice.empty()) {
++        if (!voice.empty()) {
+             std::lock_guard<std::mutex> lock(g_voices_mutex);
+-            auto                        vit = g_voices.find(req.voice);
++            auto                        vit = g_voices.find(voice);
+             if (vit != g_voices.end()) {
+                 const voice_entry & v = vit->second;
+                 have_voice            = true;
+@@ -280,10 +285,10 @@ int main(int argc, char ** argv) {
+                 p.ref_T     = voice_ref_T;
+                 p.ref_text  = voice_ref_text.c_str();
+             }
+-        } else if (!req.voice.empty() && qt_n_speakers(q) > 0) {
+-            p.speaker = req.voice.c_str();
+-        } else if (!req.voice.empty()) {
+-            err = "unknown voice '" + req.voice + "'";
++        } else if (!voice.empty() && qt_n_speakers(q) > 0) {
++            p.speaker = voice.c_str();
++        } else if (!voice.empty()) {
++            err = "unknown voice '" + voice + "'";
+             return (int) QT_STATUS_INVALID_PARAMS;
+         }
+         if (!req.instructions.empty()) {
