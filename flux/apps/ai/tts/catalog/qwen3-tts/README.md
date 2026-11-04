@@ -7,6 +7,8 @@ Each voice consists of two files on the retained voices PVC:
 
 The qwentts entrypoint registers every pair when the pod starts. Restart the Deployment after changing the files.
 
+Requests without a `voice` use `DEFAULT_VOICE` from the Deployment. If you delete or rename that voice, update `DEFAULT_VOICE` too; requests without a `voice` then fail with `unknown voice`.
+
 ## Set the voice files
 
 ```bash
