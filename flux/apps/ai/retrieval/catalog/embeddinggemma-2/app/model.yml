@@ -1,0 +1,21 @@
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: embeddinggemma-2
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-llm
+  match:
+    model: google/embeddinggemma-2
+  provider: Custom
+  custom:
+    # Halogen NPU name set in qwen3-8-flash-next/app/npu-model-names.yml.
+    backendRef:
+      kind: Service
+      name: qwen3-8-flash-next
+      port: 8080
+    formats:
+      - type: Embeddings
+        path: /v1/embeddings

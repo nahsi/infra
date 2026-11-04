@@ -1,0 +1,25 @@
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: ai-npu-model-names
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: ai-llm
+  # Halogen has no aliases for NPU models; one transformation policy applies per route.
+  traffic:
+    transformation:
+      conditional:
+      - condition: request.method == "POST" && request.path == "/v1/embeddings" && json(request.body).model == "Qwen/Qwen3-Embedding-0.6B"
+        policy:
+          request:
+            body: 'toJson(json(request.body).merge({"model": "qwen3-embedding-0.6b"}))'
+      - condition: request.method == "POST" && request.path == "/v1/embeddings" && json(request.body).model == "google/embeddinggemma-2"
+        policy:
+          request:
+            body: 'toJson(json(request.body).merge({"model": "embeddinggemma-2"}))'
+      - condition: request.method == "POST" && request.path == "/v1/rerank" && json(request.body).model == "Qwen/Qwen3-Reranker-0.6B"
+        policy:
+          request:
+            body: 'toJson(json(request.body).merge({"model": "qwen3-reranker-0.6b"}))'

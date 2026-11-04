@@ -11,10 +11,11 @@ spec:
     model: Qwen/Qwen3-Embedding-0.6B
   provider: Custom
   custom:
+    # Halogen NPU name set in qwen3-8-flash-next/app/npu-model-names.yml.
     backendRef:
-      group: inference.networking.k8s.io
-      kind: InferencePool
-      name: qwen3-embedding-0-6b
+      kind: Service
+      name: qwen3-8-flash-next
+      port: 8080
     formats:
       - type: Embeddings
         path: /v1/embeddings
