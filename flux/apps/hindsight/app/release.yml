@@ -137,7 +137,7 @@ spec:
 
               HINDSIGHT_API_RERANKER_PROVIDER: cohere
               HINDSIGHT_API_RERANKER_COHERE_BASE_URL: https://ai.nahsi.dev/v1/rerank
-              HINDSIGHT_API_RERANKER_COHERE_MODEL: zeroentropy/zerank-2
+              HINDSIGHT_API_RERANKER_COHERE_MODEL: Qwen/Qwen3-Reranker-0.6B
               HINDSIGHT_API_RERANKER_COHERE_API_KEY: *inferenceApiKey
               HINDSIGHT_API_RERANKER_MAX_TOKENS_PER_CANDIDATE: "2048"
               HINDSIGHT_API_RERANKER_MAX_CANDIDATES: "100"

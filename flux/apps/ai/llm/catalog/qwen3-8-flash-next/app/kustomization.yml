@@ -5,4 +5,5 @@ resources:
   - volumes.yml
   - model.yml
   - networkpolicy.yml
+  - npu-model-names.yml
   - aliases

@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/name: zerank-2
     app.kubernetes.io/part-of: llama-cpp
 spec:
-  replicas: 1
+  replicas: 0
   strategy:
     type: Recreate
   selector:

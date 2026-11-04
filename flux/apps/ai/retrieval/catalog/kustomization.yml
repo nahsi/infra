@@ -3,4 +3,5 @@ kind: Kustomization
 resources:
   - bge-m3
   - qwen3-embedding-0-6b
+  - qwen3-reranker-0-6b
   - zerank-2

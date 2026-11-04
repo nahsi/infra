@@ -85,7 +85,7 @@ spec:
               EMBEDDING_DOCUMENT_PREFIX: NO_PREFIX
 
               RERANK_BINDING: cohere
-              RERANK_MODEL: zeroentropy/zerank-2
+              RERANK_MODEL: Qwen/Qwen3-Reranker-0.6B
               RERANK_BINDING_HOST: https://ai.nahsi.dev/v1/rerank
               RERANK_BINDING_API_KEY:
                 valueFrom:
