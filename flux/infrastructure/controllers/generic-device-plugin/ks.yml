@@ -11,7 +11,7 @@ spec:
   wait: true
   dependsOn:
     - name: infra-node-feature-discovery
-  targetNamespace: generic-device-plugin
+  targetNamespace: kube-system
   sourceRef:
     kind: GitRepository
     name: infra
