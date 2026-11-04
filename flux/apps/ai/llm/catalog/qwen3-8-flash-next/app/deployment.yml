@@ -31,6 +31,24 @@ spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+        - name: xrt
+          image: docker.io/nahsilabs/xrt-npu:2.25.0@sha256:bff4fb5c7ae5b9c5ea536376170d54c05d3c857d7930ab63165d2881f6bfd085
+          command:
+            - cp
+            - -L
+            - /usr/lib/x86_64-linux-gnu/libxrt_coreutil.so.2
+            - /usr/lib/x86_64-linux-gnu/libxrt_core.so.2
+            - /usr/lib/x86_64-linux-gnu/libxrt_driver_xdna.so.2
+            - /xrt/
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: xrt
+              mountPath: /xrt
       containers:
         - name: halogen
           image: ghcr.io/peonist-ai/halogen-flash-server:0.18.23@sha256:b53c96edc042b1d9570cda2771c5002527f94d6aca0c8704a4475aa621d355ff
@@ -97,6 +115,11 @@ spec:
               value: "64"
             - name: HALOGEN_CACHE_PRUNE_OLD
               value: "1"
+            - name: HALOGEN_NPU_MODELS
+              value: qwen3.5-2b
+            # Skips the fabric-clock hold: BIOS 1.11 ships PMFW 100.9.0, past AMD's fix in 100.8.0 (ROCm/TheRock#8709).
+            - name: HALOGEN_NPU_WITH_GPU
+              value: "1"
           ports:
             - name: http
               containerPort: 8080
@@ -105,9 +128,11 @@ spec:
               cpu: "8"
               memory: 110Gi
               amd.com/gpu: "1"
+              devic.es/amd-npu: "1"
             limits:
               memory: 120Gi
               amd.com/gpu: "1"
+              devic.es/amd-npu: "1"
           startupProbe:
             httpGet:
               path: /health
@@ -138,6 +163,21 @@ spec:
               subPath: prompt-cache
             - name: ngram
               mountPath: /ngram
+            - name: xrt
+              mountPath: /opt/xilinx/xrt/lib
+              readOnly: true
+            - name: xrt
+              mountPath: /usr/lib/x86_64-linux-gnu/libxrt_coreutil.so.2
+              subPath: libxrt_coreutil.so.2
+              readOnly: true
+            - name: xrt
+              mountPath: /usr/lib/x86_64-linux-gnu/libxrt_core.so.2
+              subPath: libxrt_core.so.2
+              readOnly: true
+            - name: xrt
+              mountPath: /usr/lib/x86_64-linux-gnu/libxrt_driver_xdna.so.2
+              subPath: libxrt_driver_xdna.so.2
+              readOnly: true
       volumes:
         - name: models
           persistentVolumeClaim:
@@ -145,6 +185,8 @@ spec:
         - name: ngram
           persistentVolumeClaim:
             claimName: qwen3-8-flash-next-ngram
+        - name: xrt
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
