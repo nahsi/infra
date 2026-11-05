@@ -24,6 +24,9 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: ai-llm
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-systemone
   traffic:
     apiKeyAuthentication:
       mode: Strict
@@ -57,6 +60,9 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: ai-llm
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-systemone
   traffic:
     timeouts:
       request: 1800s
