@@ -2,7 +2,7 @@
 ARG UBUNTU_IMAGE=ubuntu:26.04@sha256:6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c
 ARG RUST_IMAGE=rust@sha256:bc2c4c21d4467cdbbac0ee7b95a6deb742a3467dfe0ff7647916c4b42ca56372
 ARG CORTIQ_REPO=https://github.com/nahsi/cmf.git
-ARG CORTIQ_REV=a49e2cf92136a373a71e3f655aab41acfc15dbe1
+ARG CORTIQ_REV=0d02ff228527eebaed81eade81dbb870038de5b2
 
 FROM ${UBUNTU_IMAGE} AS runtime
 RUN apt-get update \
@@ -36,7 +36,7 @@ FROM runtime
 ARG UBUNTU_IMAGE
 LABEL org.opencontainers.image.title="Cortiq" \
       org.opencontainers.image.source="https://github.com/nahsi/infra" \
-      org.opencontainers.image.version="0.8.58-nahsilabs.2" \
+      org.opencontainers.image.version="0.8.58-nahsilabs.3" \
       org.opencontainers.image.base.name="${UBUNTU_IMAGE}"
 COPY --from=build /usr/local/bin/cortiq /usr/local/bin/cortiq
 ENV HOME=/models \
