@@ -1,0 +1,39 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: weknora-valkey
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: valkey
+      version: 0.12.0
+      sourceRef:
+        kind: HelmRepository
+        name: valkey
+        namespace: flux-system
+  values:
+    fullnameOverride: weknora-valkey
+    deploymentStrategy: Recreate
+    dataStorage:
+      enabled: true
+      requestedSize: 1Gi
+      className: ceph-rbd-delete
+    auth:
+      enabled: true
+      usersExistingSecret: weknora-valkey-auth
+      aclUsers:
+        default:
+          permissions: "~* &* +@all"
+    # Asynq ingestion jobs live here; keep them across restarts and never evict.
+    valkeyConfig: |
+      appendonly yes
+      appendfsync everysec
+      maxmemory 256mb
+      maxmemory-policy noeviction
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
