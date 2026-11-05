@@ -7,11 +7,13 @@ spec:
   endpointSelector: {}
 
   ingress:
-    # Users: only through the private gateway.
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: envoy-gateway
             gateway.envoyproxy.io/owning-gateway-name: private-gateway
+        - matchLabels:
+            io.kubernetes.pod.namespace: envoy-gateway
+            gateway.envoyproxy.io/owning-gateway-name: public-gateway
       toPorts:
         - ports:
             - port: "80"
