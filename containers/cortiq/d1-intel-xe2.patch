@@ -1,0 +1,878 @@
+diff --git a/crates/cortiq-engine/src/gpu_wgpu.rs b/crates/cortiq-engine/src/gpu_wgpu.rs
+index fad5a50..c22819d 100644
+--- a/crates/cortiq-engine/src/gpu_wgpu.rs
++++ b/crates/cortiq-engine/src/gpu_wgpu.rs
+@@ -21202,6 +21202,24 @@ fn init(dev: usize) -> Result<Ctx, String> {
+                 && c.cr_type == wgpu::CooperativeScalarType::F32
+         });
+     COOP8_OK.store(want_coop8, std::sync::atomic::Ordering::Relaxed);
++    let want_spv = adapter_info.backend == wgpu::Backend::Vulkan
++        && adapter.features().contains(wgpu::Features::PASSTHROUGH_SHADERS)
++        && std::env::var("CMF_SPV").as_deref() != Ok("0");
++    SPV_OK.store(want_spv, std::sync::atomic::Ordering::Relaxed);
++    let want_coop816 = !want_coop
++        && want_spv
++        && adapter.features().contains(
++            wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX | wgpu::Features::SHADER_F16 | wgpu::Features::SUBGROUP,
++        )
++        && coop_env.as_deref() != Some("0")
++        && adapter.cooperative_matrix_properties().iter().any(|c| {
++            c.m_size == 8
++                && c.n_size == 16
++                && c.k_size == 16
++                && c.ab_type == wgpu::CooperativeScalarType::F16
++                && c.cr_type == wgpu::CooperativeScalarType::F32
++        });
++    COOP816_OK.store(want_coop816, std::sync::atomic::Ordering::Relaxed);
+     // Exact-size placement of the big buffers. wgpu's default hint
+     // ("Performance") sub-allocates device memory in 128-256 MiB blocks: a
+     // 143 MiB packed expert plane takes a block of its own and strands the
+@@ -21222,10 +21240,14 @@ fn init(dev: usize) -> Result<Ctx, String> {
+             wgpu::Features::SUBGROUP
+         } else {
+             wgpu::Features::empty()
+-        } | if want_coop || want_coop8 {
++        } | if want_coop || want_coop8 || want_coop816 {
+             wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX
+         } else {
+             wgpu::Features::empty()
++        } | if want_spv {
++            wgpu::Features::PASSTHROUGH_SHADERS
++        } else {
++            wgpu::Features::empty()
+         } | if want_f16 {
+             wgpu::Features::SHADER_F16
+         } else {
+@@ -21243,7 +21265,7 @@ fn init(dev: usize) -> Result<Ctx, String> {
+         // without it `request_device` fails outright rather than dropping
+         // the feature — which is how asking for cooperative matrices took
+         // the whole device down and every op with it.
+-        experimental_features: if want_coop || want_coop8 {
++        experimental_features: if want_coop || want_coop8 || want_coop816 {
+             unsafe { wgpu::ExperimentalFeatures::enabled() }
+         } else {
+             wgpu::ExperimentalFeatures::disabled()
+@@ -21256,6 +21278,12 @@ fn init(dev: usize) -> Result<Ctx, String> {
+         ..Default::default()
+     }))
+     .map_err(|e| format!("request_device: {e}"))?;
++    device.set_device_lost_callback(move |reason, message| {
++        if reason != wgpu::DeviceLostReason::Destroyed {
++            tracing::error!(?reason, %message, "GPU device lost; terminating process");
++            std::process::abort();
++        }
++    });
+     // Every shader-module and pipeline validation error below must fail
+     // init: an invalid pipeline silently turns its dispatches into
+     // no-ops and the graph decodes garbage (seen on phones before this
+@@ -47523,6 +47551,11 @@ pub(crate) fn pco() -> wgpu::PipelineCompilationOptions<'static> {
+ static COOP_OK: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+ /// Apple's 8×8×8 f16→f32 cooperative matrices (Metal), where 16×16 is absent.
+ static COOP8_OK: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
++/// Xe2's 8×16×16 f16→f32 cooperative matrices, reached through SPIR-V
++/// passthrough because WGSL only names 8×8 and 16×16.
++static COOP816_OK: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
++/// Vulkan SPIR-V passthrough: hand-written GLSL kernels (`gpu_wgpu/*.comp`).
++static SPV_OK: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+ 
+ pub fn coop_matrix_active() -> bool {
+     COOP_OK.load(std::sync::atomic::Ordering::Relaxed)
+diff --git a/crates/cortiq-engine/src/gpu_wgpu/d1_attn_coop.comp b/crates/cortiq-engine/src/gpu_wgpu/d1_attn_coop.comp
+new file mode 100644
+index 0000000..2481f2c
+--- /dev/null
++++ b/crates/cortiq-engine/src/gpu_wgpu/d1_attn_coop.comp
+@@ -0,0 +1,225 @@
++#version 450
++#extension GL_KHR_cooperative_matrix : require
++#extension GL_KHR_memory_scope_semantics : require
++#extension GL_KHR_shader_subgroup_basic : require
++#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
++#extension GL_EXT_control_flow_attributes : require
++
++// d1 attention on Xe2's 8x16x16 matrix units: the `set` mask (window 0) or
++// causal within a sliding window. A workgroup takes 16 queries of the 4
++// query heads sharing one KV head (64 stacked rows), so every K/V tile is
++// staged once for all four heads; a window layer visits only the key blocks
++// its queries can see. Two exact passes: row max and denominator, then
++// O = softmax(S)·V. Keeping the softmax statistics final before P·V means
++// the accumulators never need the per-row rescale KHR cooperative matrices
++// cannot express.
++layout(local_size_x = 128) in;
++
++layout(std430, set = 0, binding = 0) readonly buffer Q { vec4 q4[]; };
++layout(std430, set = 0, binding = 1) readonly buffer K { vec4 k4[]; };
++layout(std430, set = 0, binding = 2) readonly buffer V { vec4 v4[]; };
++layout(std430, set = 0, binding = 3) buffer O { float o[]; };
++layout(std430, set = 0, binding = 4) readonly buffer G { int grp[]; };
++layout(std140, set = 0, binding = 5) uniform P {
++    uint t;
++    uint nh;
++    uint nkv;
++    uint state;
++    uint r0;
++    float scale;
++    uint window;
++    uint pad1;
++} p;
++
++const uint HD = 128;
++const uint HPG = 4;
++const uint QB = 16;
++const uint ROWS = HPG * QB;
++const uint BC = 32;
++
++shared float16_t Qs[ROWS * HD];
++shared float16_t KVs[BC * HD];
++shared float Ss[ROWS * BC];
++shared float16_t Ps[ROWS * BC];
++shared float rowm[ROWS];
++shared float rowl[ROWS];
++shared int gk[BC];
++
++void stage_kv(uint kb, uint g, bool is_v) {
++    const uint tid = gl_LocalInvocationIndex;
++    for (uint e = tid; e < BC * (HD / 4); e += 128) {
++        const uint key = e / (HD / 4);
++        const uint d4 = e % (HD / 4);
++        const uint j = kb + key;
++        vec4 v = vec4(0.0);
++        if (j < p.t) {
++            const uint idx = (j * p.nkv + g) * (HD / 4) + d4;
++            v = is_v ? v4[idx] : k4[idx];
++        }
++        const uint d = key * HD + d4 * 4;
++        KVs[d] = float16_t(v.x);
++        KVs[d + 1] = float16_t(v.y);
++        KVs[d + 2] = float16_t(v.z);
++        KVs[d + 3] = float16_t(v.w);
++    }
++    if (!is_v) {
++        for (uint e = tid; e < BC; e += 128) {
++            const uint j = kb + e;
++            gk[e] = j < p.t ? grp[j] : 0;
++        }
++    }
++}
++
++void scores(uint sg, uint nsg) {
++    const uint tiles = (ROWS / 8) * (BC / 16);
++    for (uint ti = sg; ti < tiles; ti += nsg) {
++        const uint tm = ti / (BC / 16);
++        const uint tn = ti % (BC / 16);
++        coopmat<float, gl_ScopeSubgroup, 8, 16, gl_MatrixUseAccumulator> acc =
++            coopmat<float, gl_ScopeSubgroup, 8, 16, gl_MatrixUseAccumulator>(0.0);
++        [[unroll]] for (uint d0 = 0; d0 < HD; d0 += 16) {
++            coopmat<float16_t, gl_ScopeSubgroup, 8, 16, gl_MatrixUseA> a;
++            coopmat<float16_t, gl_ScopeSubgroup, 16, 16, gl_MatrixUseB> b;
++            coopMatLoad(a, Qs, tm * 8 * HD + d0, HD, gl_CooperativeMatrixLayoutRowMajor);
++            coopMatLoad(b, KVs, tn * 16 * HD + d0, HD, gl_CooperativeMatrixLayoutColumnMajor);
++            acc = coopMatMulAdd(a, b, acc);
++        }
++        coopMatStore(acc, Ss, tm * 8 * BC + tn * 16, BC, gl_CooperativeMatrixLayoutRowMajor);
++    }
++}
++
++bool visible(uint i, int gi, uint j, uint c) {
++    if (p.window != 0) {
++        return j < p.t && j <= i && j + p.window > i;
++    }
++    return j < p.t && (i < p.state || j < p.state || gk[c] == gi);
++}
++
++void main() {
++    const uint tid = gl_LocalInvocationIndex;
++    const uint sg = gl_SubgroupID;
++    const uint nsg = gl_NumSubgroups;
++    const uint g = gl_WorkGroupID.y;
++    const uint q0 = p.r0 + gl_WorkGroupID.x * QB;
++
++    for (uint e = tid; e < ROWS * (HD / 4); e += 128) {
++        const uint r = e / (HD / 4);
++        const uint d4 = e % (HD / 4);
++        const uint i = q0 + (r % QB);
++        const uint h = g * HPG + r / QB;
++        vec4 v = vec4(0.0);
++        if (i < p.t) {
++            v = q4[(i * p.nh + h) * (HD / 4) + d4];
++        }
++        const uint d = r * HD + d4 * 4;
++        Qs[d] = float16_t(v.x);
++        Qs[d + 1] = float16_t(v.y);
++        Qs[d + 2] = float16_t(v.z);
++        Qs[d + 3] = float16_t(v.w);
++    }
++    uint my_i = 0;
++    int my_g = 0;
++    if (tid < ROWS) {
++        my_i = q0 + (tid % QB);
++        my_g = grp[min(my_i, p.t - 1)];
++        rowm[tid] = -3.0e38;
++        rowl[tid] = 0.0;
++    }
++    barrier();
++    uint klo = 0;
++    uint khi = p.t;
++    if (p.window != 0) {
++        klo = ((q0 + 1 > p.window ? q0 + 1 - p.window : 0) / BC) * BC;
++        khi = min(p.t, q0 + QB);
++    }
++
++    for (uint kb = klo; kb < khi; kb += BC) {
++        stage_kv(kb, g, false);
++        barrier();
++        scores(sg, nsg);
++        barrier();
++        if (tid < ROWS) {
++            float m = rowm[tid];
++            float l = rowl[tid];
++            for (uint c = 0; c < BC; c++) {
++                if (visible(my_i, my_g, kb + c, c)) {
++                    const float s = Ss[tid * BC + c] * p.scale;
++                    if (s > m) {
++                        l = l * exp(m - s) + 1.0;
++                        m = s;
++                    } else {
++                        l += exp(s - m);
++                    }
++                }
++            }
++            rowm[tid] = m;
++            rowl[tid] = l;
++        }
++        barrier();
++    }
++
++    // The 64x128 output split tile by tile over the subgroups, whatever
++    // width ANV dispatches at (SIMD32 on Xe2: 16 tiles each). A fixed
++    // per-subgroup layout measured slower on the B50.
++    const uint otiles = (ROWS / 8) * (HD / 16);
++    const uint tps = otiles / nsg;
++    coopmat<float, gl_ScopeSubgroup, 8, 16, gl_MatrixUseAccumulator> acc[16];
++    [[unroll]] for (uint i = 0; i < 16; i++) {
++        acc[i] = coopmat<float, gl_ScopeSubgroup, 8, 16, gl_MatrixUseAccumulator>(0.0);
++    }
++
++    for (uint kb = klo; kb < khi; kb += BC) {
++        stage_kv(kb, g, false);
++        barrier();
++        scores(sg, nsg);
++        barrier();
++        for (uint e = tid; e < ROWS * BC; e += 128) {
++            const uint r = e / BC;
++            const uint c = e % BC;
++            const uint i = q0 + (r % QB);
++            const int gi = grp[min(i, p.t - 1)];
++            float pr = 0.0;
++            if (visible(i, gi, kb + c, c)) {
++                pr = exp(Ss[e] * p.scale - rowm[r]) / rowl[r];
++            }
++            Ps[e] = float16_t(pr);
++        }
++        barrier();
++        stage_kv(kb, g, true);
++        barrier();
++        [[unroll]] for (uint i = 0; i < 16; i++) {
++            if (i < tps) {
++                const uint ti = sg + i * nsg;
++                const uint tm = ti / (HD / 16);
++                const uint tn = ti % (HD / 16);
++                [[unroll]] for (uint k0 = 0; k0 < BC; k0 += 16) {
++                    coopmat<float16_t, gl_ScopeSubgroup, 8, 16, gl_MatrixUseA> a;
++                    coopmat<float16_t, gl_ScopeSubgroup, 16, 16, gl_MatrixUseB> b;
++                    coopMatLoad(a, Ps, tm * 8 * BC + k0, BC, gl_CooperativeMatrixLayoutRowMajor);
++                    coopMatLoad(b, KVs, k0 * HD + tn * 16, HD, gl_CooperativeMatrixLayoutRowMajor);
++                    acc[i] = coopMatMulAdd(a, b, acc[i]);
++                }
++            }
++        }
++        barrier();
++    }
++
++    [[unroll]] for (uint i = 0; i < 16; i++) {
++        if (i < tps) {
++            const uint ti = sg + i * nsg;
++            const uint tm = ti / (HD / 16);
++            const uint tn = ti % (HD / 16);
++            coopMatStore(acc[i], Ss, sg * 128, 16, gl_CooperativeMatrixLayoutRowMajor);
++            subgroupBarrier();
++            for (uint e = gl_SubgroupInvocationID; e < 128; e += gl_SubgroupSize) {
++                const uint rr = tm * 8 + e / 16;
++                const uint qi = q0 + (rr % QB);
++                const uint h = g * HPG + rr / QB;
++                if (qi < p.t) {
++                    o[(qi * p.nh + h) * HD + tn * 16 + (e % 16)] = Ss[sg * 128 + e];
++                }
++            }
++            subgroupBarrier();
++        }
++    }
++}
+diff --git a/crates/cortiq-engine/src/gpu_wgpu/d1_q8_dp4a.comp b/crates/cortiq-engine/src/gpu_wgpu/d1_q8_dp4a.comp
+new file mode 100644
+index 0000000..fa6d9d9
+--- /dev/null
++++ b/crates/cortiq-engine/src/gpu_wgpu/d1_q8_dp4a.comp
+@@ -0,0 +1,124 @@
++#version 450
++#extension GL_EXT_control_flow_attributes : require
++#extension GL_EXT_integer_dot_product : require
++
++// y[nb][rows] = rowscale[n] * sum_b dx[m][b] * <q[n][b], qx[m][b]>: the
++// q8_2f GEMM as int8 dot products over 32-wide blocks, the arm llama.cpp
++// runs Q8_0 on for Intel GPUs. A workgroup computes BM weight rows by BN
++// tokens; each thread a TM x TN register tile with rows strided by BM / TM
++// and tokens by BN / TN. Defaults: the fastest of a sweep on an Arc Pro B50
++// (Xe2, Mesa ANV) at 7680x2048x3499, 9.8 TFLOPS with the quantize pass.
++#ifndef BM
++#define BM 128
++#endif
++#ifndef BN
++#define BN 128
++#endif
++#ifndef TM
++#define TM 4
++#endif
++#ifndef TN
++#define TN 8
++#endif
++#ifndef NT
++#define NT 512
++#endif
++#ifndef PADW
++#define PADW 1
++#endif
++#ifndef KS
++#define KS 1
++#endif
++
++const uint RS = BM / TM;
++const uint CS = BN / TN;
++const uint LDW = 8 + PADW;
++
++layout(local_size_x = NT) in;
++
++layout(std430, set = 0, binding = 0) readonly buffer Wq { uint wq[]; };
++layout(std430, set = 0, binding = 1) readonly buffer QX { uint qx[]; };
++layout(std430, set = 0, binding = 2) readonly buffer DX { float dx[]; };
++layout(std430, set = 0, binding = 3) writeonly buffer Y { float y[]; };
++layout(std140, set = 0, binding = 4) uniform P { uint cols4; uint rows; uint nb; uint cols; } p;
++
++shared uint As[KS * BM * LDW];
++shared uint Bs[KS * BN * LDW];
++shared float Bd[KS * BN];
++
++void main() {
++    const uint tid = gl_LocalInvocationIndex;
++    const uint n0 = gl_WorkGroupID.x * BM;
++    const uint m0 = gl_WorkGroupID.y * BN;
++    const uint tr = tid % RS;
++    const uint tc = tid / RS;
++    const uint nblk = p.cols / 32;
++    const uint rs0 = (p.rows * p.cols) >> 2;
++
++    float acc[TM][TN];
++    [[unroll]] for (uint i = 0; i < TM; i++) {
++        [[unroll]] for (uint j = 0; j < TN; j++) {
++            acc[i][j] = 0.0;
++        }
++    }
++
++    for (uint kb0 = 0; kb0 < nblk; kb0 += KS) {
++        [[unroll]] for (uint s = 0; s < (KS * BM * 8) / NT; s++) {
++            const uint i = tid + s * NT;
++            const uint r = i / (8 * KS);
++            const uint q = i % (8 * KS);
++            const uint k = q / 8;
++            const uint w = q % 8;
++            As[(k * BM + r) * LDW + w] = kb0 + k < nblk ? wq[(n0 + r) * (p.cols / 4) + (kb0 + k) * 8 + w] : 0u;
++        }
++        [[unroll]] for (uint s = 0; s < (KS * BN * 8) / NT; s++) {
++            const uint i = tid + s * NT;
++            const uint c = i / (8 * KS);
++            const uint q = i % (8 * KS);
++            const uint k = q / 8;
++            const uint w = q % 8;
++            const bool live = m0 + c < p.nb && kb0 + k < nblk;
++            Bs[(k * BN + c) * LDW + w] = live ? qx[((m0 + c) * nblk + kb0 + k) * 8 + w] : 0u;
++            if (w == 0) {
++                Bd[k * BN + c] = live ? dx[(m0 + c) * nblk + kb0 + k] : 0.0;
++            }
++        }
++        barrier();
++        [[unroll]] for (uint k = 0; k < KS; k++) {
++            int a[TM][8];
++            [[unroll]] for (uint i = 0; i < TM; i++) {
++                [[unroll]] for (uint w = 0; w < 8; w++) {
++                    a[i][w] = int(As[(k * BM + tr + i * RS) * LDW + w]);
++                }
++            }
++            [[unroll]] for (uint j = 0; j < TN; j++) {
++                const uint c = tc + j * CS;
++                int b[8];
++                [[unroll]] for (uint w = 0; w < 8; w++) {
++                    b[w] = int(Bs[(k * BN + c) * LDW + w]);
++                }
++                const float d = Bd[k * BN + c];
++                [[unroll]] for (uint i = 0; i < TM; i++) {
++                    int s = 0;
++                    [[unroll]] for (uint w = 0; w < 8; w++) {
++                        s += dotPacked4x8EXT(a[i][w], b[w]);
++                    }
++                    acc[i][j] += float(s) * d;
++                }
++            }
++        }
++        barrier();
++    }
++
++    [[unroll]] for (uint i = 0; i < TM; i++) {
++        const uint r = n0 + tr + i * RS;
++        const vec2 r2 = unpackHalf2x16(wq[rs0 + (r >> 1)]);
++        const float rs = (r & 1) == 0 ? r2.x : r2.y;
++        [[unroll]] for (uint j = 0; j < TN; j++) {
++            const uint c = m0 + tc + j * CS;
++            if (c < p.nb) {
++                y[c * p.rows + r] = acc[i][j] * rs;
++            }
++        }
++    }
++}
+diff --git a/crates/cortiq-engine/src/gpu_wgpu/d1_q8_quant.comp b/crates/cortiq-engine/src/gpu_wgpu/d1_q8_quant.comp
+new file mode 100644
+index 0000000..48089e4
+--- /dev/null
++++ b/crates/cortiq-engine/src/gpu_wgpu/d1_q8_quant.comp
+@@ -0,0 +1,40 @@
++#version 450
++#extension GL_EXT_control_flow_attributes : require
++
++// x'[m][k] = x[m][k] * colfield[k] of a q8_2f weight, quantized per block of
++// 32 to int8 with one f32 scale: the activation side of the int8 dot-product
++// GEMM (llama.cpp's q8_1 activations, without the sum term the symmetric
++// weight never needs).
++layout(local_size_x = 256) in;
++
++layout(std430, set = 0, binding = 0) readonly buffer Wq { uint wq[]; };
++layout(std430, set = 0, binding = 1) readonly buffer X { vec4 x4[]; };
++layout(std430, set = 0, binding = 2) writeonly buffer QX { uint qx[]; };
++layout(std430, set = 0, binding = 3) writeonly buffer DX { float dx[]; };
++layout(std140, set = 0, binding = 4) uniform P { uint cols4; uint rows; uint nb; uint cols; } p;
++
++void main() {
++    const uint nblk = p.cols / 32;
++    const uint idx = gl_GlobalInvocationID.y * 65535u * 256u + gl_GlobalInvocationID.x;
++    if (idx >= p.nb * nblk) {
++        return;
++    }
++    const uint m = idx / nblk;
++    const uint b = idx % nblk;
++    const uint cs0w = (((p.rows * p.cols) >> 1) + p.rows) >> 1;
++    vec4 v[8];
++    float amax = 0.0;
++    [[unroll]] for (uint i = 0; i < 8; i++) {
++        const uint cw = cs0w + b * 16 + i * 2;
++        const vec4 cf = vec4(unpackHalf2x16(wq[cw]), unpackHalf2x16(wq[cw + 1]));
++        v[i] = x4[m * p.cols4 + b * 8 + i] * cf;
++        amax = max(amax, max(max(abs(v[i].x), abs(v[i].y)), max(abs(v[i].z), abs(v[i].w))));
++    }
++    const float d = amax / 127.0;
++    const float inv = d > 0.0 ? 1.0 / d : 0.0;
++    [[unroll]] for (uint i = 0; i < 8; i++) {
++        const ivec4 q = clamp(ivec4(round(v[i] * inv)), ivec4(-127), ivec4(127));
++        qx[idx * 8 + i] = uint(q.x & 0xff) | (uint(q.y & 0xff) << 8) | (uint(q.z & 0xff) << 16) | (uint(q.w & 0xff) << 24);
++    }
++    dx[idx] = d;
++}
+diff --git a/crates/cortiq-engine/src/gpu_wgpu/lfm_set.rs b/crates/cortiq-engine/src/gpu_wgpu/lfm_set.rs
+index 3cc9168..5b32262 100644
+--- a/crates/cortiq-engine/src/gpu_wgpu/lfm_set.rs
++++ b/crates/cortiq-engine/src/gpu_wgpu/lfm_set.rs
+@@ -1,10 +1,10 @@
+ //! d1's one-pass forward on wgpu (`pipeline_masked::forward_masked`), the
+-//! twin of `gpu_metal::lfm_set`: every layer of an LFM3 stack over the whole
+-//! packed row in one submission — the batch graph's q4tp / q8_2f GEMMs, the
+-//! short convolution walked over the positions from an empty ring, Q/K norm
+-//! + RoPE per row, the `set` attention (or causal within a sliding window)
+-//! and the per-head sigmoid gate. The host path ran each projection as its
+-//! own submission: ~0.7 s for a 228-token request on an A40.
++//! twin of `gpu_metal::lfm_set`: each layer of an LFM3 stack over the whole
++//! packed row in its own submission, completed before the next layer to
++//! bound GPU jobs. Uses the batch graph's q4tp / q8_2f GEMMs, the short
++//! convolution walked over the positions from an empty ring, Q/K norm +
++//! RoPE per row, the `set` attention (or causal within a sliding window)
++//! and the per-head sigmoid gate.
+ //!
+ //! No subgroup operations: every reduction goes through workgroup memory,
+ //! so the module compiles on every adapter the engine runs.
+@@ -53,8 +53,9 @@ fn ls_norm_add_rows(@builtin(workgroup_id) wid: vec3<u32>, @builtin(local_invoca
+ }
+ 
+ // The gated short convolution over `t` positions from an empty ring, one
+-// lane a channel: bcx rows [B | C | x] (3h), taps [h][k] with tap k-1 on
+-// the current position; y = C·(tap[k-1]·B·x + Σ tap[k-2-s]·ring[s]).
++// lane a (position, channel): bcx rows [B | C | x] (3h), taps [h][k] with
++// tap k-1 on the current position; y = C·Σ_s tap[k-1-s]·(B·x)[r-s], zero
++// before the first position. No recurrence, so every position runs at once.
+ struct ScP { h: u32, k: u32, t: u32, pad: u32 };
+ @group(0) @binding(0) var<storage, read>       sc_bcx:  array<f32>;
+ @group(0) @binding(1) var<storage, read>       sc_taps: array<f32>;
+@@ -63,23 +64,18 @@ struct ScP { h: u32, k: u32, t: u32, pad: u32 };
+ @compute @workgroup_size(256)
+ fn ls_sconv(@builtin(global_invocation_id) gid: vec3<u32>) {
+     let ch = gid.x;
++    let r = gid.y;
+     let h = sc_p.h;
+-    if (ch >= h) { return; }
++    if (ch >= h || r >= sc_p.t) { return; }
+     let k = sc_p.k;
+-    let rl = k - 1u;
+-    var ring: array<f32, 15>;
+-    for (var s = 0u; s < 15u; s = s + 1u) { ring[s] = 0.0; }
+     let tb = ch * k;
+-    for (var r = 0u; r < sc_p.t; r = r + 1u) {
+-        let rb = r * 3u * h;
+-        let bx = sc_bcx[rb + ch] * sc_bcx[rb + 2u * h + ch];
+-        var acc = sc_taps[tb + k - 1u] * bx;
+-        for (var s = 0u; s < rl; s = s + 1u) { acc = acc + sc_taps[tb + k - 2u - s] * ring[s]; }
+-        sc_y[r * h + ch] = sc_bcx[rb + h + ch] * acc;
+-        var j = rl;
+-        loop { if (j <= 1u) { break; } ring[j - 1u] = ring[j - 2u]; j = j - 1u; }
+-        if (rl > 0u) { ring[0] = bx; }
++    var acc = 0.0;
++    for (var s = 0u; s < k; s = s + 1u) {
++        if (s > r) { break; }
++        let rb = (r - s) * 3u * h;
++        acc = acc + sc_taps[tb + k - 1u - s] * sc_bcx[rb + ch] * sc_bcx[rb + 2u * h + ch];
+     }
++    sc_y[r * h + ch] = sc_bcx[r * 3u * h + h + ch] * acc;
+ }
+ 
+ // Per (head, row): the head's RMS norm (when `hasw`), then RoPE at the
+@@ -137,12 +133,12 @@ fn ls_qk_rope(@builtin(workgroup_id) wid: vec3<u32>, @builtin(local_invocation_i
+     loop { if (d >= hd) { break; } qr_x[base + d] = qr_a[d]; d = d + 32u; }
+ }
+ 
+-// Attention of row i (wid.x), head hh (wid.y) over the packed row: online
++// Attention of row r0 + wid.x, head hh (wid.y) over the packed row: online
+ // softmax in 128-key blocks, one key a lane for the scores, one dim a lane
+ // for P·V. `window` 0: d1's `set` mask (the state reads every row and is
+ // read by every row; a question row reads its own question); otherwise
+ // causal within the window. hd ≤ 256.
+-struct AtP { t: u32, nh: u32, nkv: u32, hd: u32, state: u32, window: u32, scale: f32, pad: u32 };
++struct AtP { t: u32, nh: u32, nkv: u32, hd: u32, state: u32, window: u32, scale: f32, r0: u32 };
+ @group(0) @binding(0) var<storage, read>       at_q: array<f32>;
+ @group(0) @binding(1) var<storage, read>       at_k: array<f32>;
+ @group(0) @binding(2) var<storage, read>       at_v: array<f32>;
+@@ -155,7 +151,7 @@ var<workgroup> at_red: array<f32, 128>;
+ const NEG: f32 = -3.0e38;
+ @compute @workgroup_size(128)
+ fn ls_attn(@builtin(workgroup_id) wid: vec3<u32>, @builtin(local_invocation_id) lid: vec3<u32>) {
+-    let i = wid.x;
++    let i = at_p.r0 + wid.x;
+     let hh = wid.y;
+     let tid = lid.x;
+     let hd = at_p.hd;
+@@ -391,6 +387,103 @@ fn resolve(c: &Ctx, model: &Arc<CmfModel>, w: SetW) -> Option<Proj> {
+     Some(Proj { w, rows, cols })
+ }
+ 
++/// A hand-written SPIR-V kernel (GLSL in `gpu_wgpu/*.comp`, compiled with
++/// glslc at build time) behind an explicit bind group layout.
++struct Spv {
++    pipe: wgpu::ComputePipeline,
++    layout: wgpu::BindGroupLayout,
++}
++
++fn spv_pipe(
++    c: &Ctx,
++    gate: &std::sync::atomic::AtomicBool,
++    label: &str,
++    spv: &[u8],
++    bindings: &[wgpu::BufferBindingType],
++) -> Option<Spv> {
++    if !gate.load(std::sync::atomic::Ordering::Relaxed) {
++        return None;
++    }
++    let entries: Vec<wgpu::BindGroupLayoutEntry> = bindings
++        .iter()
++        .enumerate()
++        .map(|(i, &ty)| wgpu::BindGroupLayoutEntry {
++            binding: i as u32,
++            visibility: wgpu::ShaderStages::COMPUTE,
++            ty: wgpu::BindingType::Buffer {
++                ty,
++                has_dynamic_offset: false,
++                min_binding_size: None,
++            },
++            count: None,
++        })
++        .collect();
++    let layout = c.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
++        label: Some(label),
++        entries: &entries,
++    });
++    let pl = c.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
++        label: Some(label),
++        bind_group_layouts: &[Some(&layout)],
++        immediate_size: 0,
++    });
++    let words: Vec<u32> = spv
++        .chunks_exact(4)
++        .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]))
++        .collect();
++    let scope = c.device.push_error_scope(wgpu::ErrorFilter::Validation);
++    let module = unsafe {
++        c.device.create_shader_module_passthrough(wgpu::ShaderModuleDescriptorPassthrough {
++            label: Some(label),
++            entry_points: std::borrow::Cow::Owned(vec![wgpu::PassthroughShaderEntryPoint {
++                name: "main".into(),
++                workgroup_size: (128, 1, 1),
++            }]),
++            spirv: Some(std::borrow::Cow::Owned(words)),
++            ..Default::default()
++        })
++    };
++    let pipe = c.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
++        label: Some(label),
++        layout: Some(&pl),
++        module: &module,
++        entry_point: Some("main"),
++        compilation_options: Default::default(),
++        cache: None,
++    });
++    if let Some(e) = pollster::block_on(scope.pop()) {
++        tracing::warn!("{label} rejected ({e}); the WGSL kernel stays");
++        return None;
++    }
++    tracing::info!("{label}: SPIR-V kernel on");
++    Some(Spv { pipe, layout })
++}
++
++const RO: wgpu::BufferBindingType = wgpu::BufferBindingType::Storage { read_only: true };
++const RW: wgpu::BufferBindingType = wgpu::BufferBindingType::Storage { read_only: false };
++const UNI: wgpu::BufferBindingType = wgpu::BufferBindingType::Uniform;
++
++/// The q8_2f GEMM as int8 dot products: activations times the column field,
++/// quantized per 32-block (`d1_q8_quant`), then `d1_q8_dp4a`.
++fn q8_dp4a(c: &Ctx) -> Option<&'static (Spv, Spv)> {
++    static PIPES: std::sync::OnceLock<Option<(Spv, Spv)>> = std::sync::OnceLock::new();
++    PIPES
++        .get_or_init(|| {
++            let quant = spv_pipe(c, &super::SPV_OK, "d1-q8-quant", include_bytes!("d1_q8_quant.spv"), &[RO, RO, RW, RW, UNI])?;
++            let gemm = spv_pipe(c, &super::SPV_OK, "d1-q8-dp4a", include_bytes!("d1_q8_dp4a.spv"), &[RO, RO, RO, RW, UNI])?;
++            Some((quant, gemm))
++        })
++        .as_ref()
++}
++
++fn attn816(c: &Ctx) -> Option<&'static Spv> {
++    static PIPE: std::sync::OnceLock<Option<Spv>> = std::sync::OnceLock::new();
++    PIPE.get_or_init(|| {
++        spv_pipe(c, &super::COOP816_OK, "d1-set-attn", include_bytes!("d1_attn_coop.spv"), &[RO, RO, RO, RW, RO, UNI])
++    })
++    .as_ref()
++}
++
+ /// y[k][rows] = x[k][cols] · Wᵀ through the batch graph's kernels.
+ fn mm(c: &Ctx, enc: &mut wgpu::CommandEncoder, w: &Proj, xs: &wgpu::Buffer, y: &wgpu::Buffer, k: usize) {
+     let (rows, cols) = (w.rows, w.cols);
+@@ -424,6 +517,35 @@ fn mm(c: &Ctx, enc: &mut wgpu::CommandEncoder, w: &Proj, xs: &wgpu::Buffer, y: &
+             }
+         }
+         W::Q8(b) => {
++            if k > 16 && rows % 128 == 0 && cols % 32 == 0 {
++                if let Some((quant, gemm)) = q8_dp4a(c) {
++                    let nblk = cols / 32;
++                    let qx = scratch(c, 12, k * cols, wgpu::BufferUsages::STORAGE);
++                    let dx = scratch(c, 13, k * nblk * 4, wgpu::BufferUsages::STORAGE);
++                    let u = uniform_u32x4(c, [(cols / 4) as u32, rows as u32, k as u32, cols as u32]);
++                    let bq = c.device.create_bind_group(&wgpu::BindGroupDescriptor {
++                        label: None,
++                        layout: &quant.layout,
++                        entries: &[bind_buf(0, b), bind_buf(1, xs), bind_buf(2, &qx), bind_buf(3, &dx), bind_buf(4, &u)],
++                    });
++                    let bg = c.device.create_bind_group(&wgpu::BindGroupDescriptor {
++                        label: None,
++                        layout: &gemm.layout,
++                        entries: &[bind_buf(0, b), bind_buf(1, &qx), bind_buf(2, &dx), bind_buf(3, y), bind_buf(4, &u)],
++                    });
++                    let groups = ((k * nblk) as u32).div_ceil(256);
++                    let mut pass = begin_pass(enc);
++                    pass.set_pipeline(&quant.pipe);
++                    pass.set_bind_group(0, &bq, &[]);
++                    pass.dispatch_workgroups(groups.min(65535), groups.div_ceil(65535), 1);
++                    drop(pass);
++                    let mut pass = begin_pass(enc);
++                    pass.set_pipeline(&gemm.pipe);
++                    pass.set_bind_group(0, &bg, &[]);
++                    pass.dispatch_workgroups((rows / 128) as u32, k.div_ceil(128) as u32, 1);
++                    return;
++                }
++            }
+             if k > 16
+                 && gemma_batch::pipes(c)
+                     .is_some_and(|gp| gemma_batch::encode_q82_mm(c, enc, gp, b, xs, y, rows, cols, k))
+@@ -463,6 +585,10 @@ fn scratch(c: &Ctx, role: u8, bytes: usize, usage: wgpu::BufferUsages) -> wgpu::
+     b
+ }
+ 
++/// Query-row × key pairs per attention submission: about one second on an
++/// Arc Pro B50, well inside the 5 s xe job watchdog.
++const ATTN_PAIRS_PER_SUBMIT: usize = 1 << 25;
++
+ /// The final-normed hidden rows `[t, hidden]` of `rows` under d1's mask
+ /// and, with `head`, the logits of its rows; None when the stack or a
+ /// weight is outside these kernels.
+@@ -625,10 +751,6 @@ pub(crate) fn forward(
+         pass.dispatch_workgroups(x, y, 1);
+     };
+     let rms_u = unif(&[hs as u32, d.gemma as u32, d.eps.to_bits(), 0]);
+-    let mut enc = c.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+-        label: Some("d1-set"),
+-    });
+-    let _merge_guard = PassMergeGuard::new(&enc);
+     let rms = |enc: &mut wgpu::CommandEncoder, x: &wgpu::Buffer, w: &[f32], o: &wgpu::Buffer| {
+         go(enc, &c.rmsnorm_b, &bg(&c.layout_rmsnorm_b, &[x, &stor(w), o, &rms_u]), t as u32, 1);
+     };
+@@ -638,6 +760,10 @@ pub(crate) fn forward(
+         go(enc, &p.norm_add.p, &bg(&p.norm_add.l, &[&h_b, dl, &wb, &u]), t as u32, 1);
+     };
+     for (l, pr) in layers.iter().zip(&preps) {
++        let mut enc = c.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
++            label: Some("d1-set-layer"),
++        });
++        let mut merge_guard = PassMergeGuard::new(&enc);
+         rms(&mut enc, &h_b, l.input_norm, &n_b);
+         match &l.mixer {
+             SetMixer::Conv { taps, kernel, .. } => {
+@@ -648,7 +774,7 @@ pub(crate) fn forward(
+                     &p.sconv.p,
+                     &bg(&p.sconv.l, &[&x_b, &stor(*taps), &a_b, &u]),
+                     (hs as u32).div_ceil(256),
+-                    1,
++                    t as u32,
+                 );
+                 mm(c, &mut enc, &pr.mix[1], &a_b, &d_b, t);
+             }
+@@ -686,23 +812,74 @@ pub(crate) fn forward(
+                         t as u32,
+                     );
+                 }
+-                let u = unif(&[
+-                    t as u32,
+-                    d.nh as u32,
+-                    *nkv as u32,
+-                    d.hd as u32,
+-                    state as u32,
+-                    window.unwrap_or(0) as u32,
+-                    d.scale.to_bits(),
+-                    0,
+-                ]);
+-                go(
+-                    &mut enc,
+-                    &p.attn.p,
+-                    &bg(&p.attn.l, &[&x_b, &k_b, &v_b, &a_b, &g_b, &u]),
+-                    t as u32,
+-                    d.nh as u32,
+-                );
++                let coop_attn = if d.hd == 128 && d.nh == 4 * *nkv { attn816(c) } else { None };
++                let keys = window.map_or(t, |w| w.min(t));
++                let mut block = (ATTN_PAIRS_PER_SUBMIT / keys).clamp(1, t);
++                if coop_attn.is_some() {
++                    block = (block / 16).max(1) * 16;
++                }
++                let mut r0 = 0;
++                while r0 < t {
++                    let rows = block.min(t - r0);
++                    if let Some(cp) = coop_attn {
++                        let u = unif(&[
++                            t as u32,
++                            d.nh as u32,
++                            *nkv as u32,
++                            state as u32,
++                            r0 as u32,
++                            d.scale.to_bits(),
++                            window.unwrap_or(0) as u32,
++                            0,
++                        ]);
++                        let bind = c.device.create_bind_group(&wgpu::BindGroupDescriptor {
++                            label: None,
++                            layout: &cp.layout,
++                            entries: &[
++                                bind_buf(0, &x_b),
++                                bind_buf(1, &k_b),
++                                bind_buf(2, &v_b),
++                                bind_buf(3, &a_b),
++                                bind_buf(4, &g_b),
++                                bind_buf(5, &u),
++                            ],
++                        });
++                        let mut pass = begin_pass(&mut enc);
++                        pass.set_pipeline(&cp.pipe);
++                        pass.set_bind_group(0, &bind, &[]);
++                        pass.dispatch_workgroups(rows.div_ceil(16) as u32, *nkv as u32, 1);
++                    } else {
++                        let u = unif(&[
++                            t as u32,
++                            d.nh as u32,
++                            *nkv as u32,
++                            d.hd as u32,
++                            state as u32,
++                            window.unwrap_or(0) as u32,
++                            d.scale.to_bits(),
++                            r0 as u32,
++                        ]);
++                        go(
++                            &mut enc,
++                            &p.attn.p,
++                            &bg(&p.attn.l, &[&x_b, &k_b, &v_b, &a_b, &g_b, &u]),
++                            rows as u32,
++                            d.nh as u32,
++                        );
++                    }
++                    r0 += rows;
++                    if r0 < t {
++                        drop(merge_guard);
++                        submit(c, finish_enc(enc));
++                        c.device
++                            .poll(wgpu::PollType::wait_indefinitely())
++                            .expect("d1 attention submission failed");
++                        enc = c.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
++                            label: Some("d1-set-attn"),
++                        });
++                        merge_guard = PassMergeGuard::new(&enc);
++                    }
++                }
+                 if let Some(gw) = head_gate {
+                     let u = unif(&[d.nh as u32, d.hd as u32, hs as u32, 0]);
+                     go(
+@@ -727,7 +904,16 @@ pub(crate) fn forward(
+         go(&mut enc, &p.silu_mul.p, &bg(&p.silu_mul.l, &[&x_b, &u_b, &a_b, &u]), groups, 1);
+         mm(c, &mut enc, &pr.ffn[2], &a_b, &d_b, t);
+         norm_add(&mut enc, &d_b, l.ffn_out_norm);
++        drop(merge_guard);
++        submit(c, finish_enc(enc));
++        c.device
++            .poll(wgpu::PollType::wait_indefinitely())
++            .expect("d1 layer submission failed");
+     }
++    let mut enc = c.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
++        label: Some("d1-set"),
++    });
++    let _merge_guard = PassMergeGuard::new(&enc);
+     rms(&mut enc, &h_b, final_norm, &n_b);
+     let mut out = vec![0f32; t * hs];
+     let Some((w, idx)) = &head else {
+diff --git a/crates/cortiq-server/src/openai.rs b/crates/cortiq-server/src/openai.rs
+index 92683c8..af91125 100644
+--- a/crates/cortiq-server/src/openai.rs
++++ b/crates/cortiq-server/src/openai.rs
+@@ -1,6 +1,6 @@
+ //! OpenAI-compatible API endpoints, backed by the real inference
+ //! pipeline. Generation runs in `spawn_blocking` behind a Mutex — a
+-//! panic inside the pipeline becomes a 500, never a dead process.
++//! task panic becomes a 500; unexpected GPU device loss terminates the process.
+ 
+ use crate::AppState;
+ use crate::streaming::{self, ChatStream};
