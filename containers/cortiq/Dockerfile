@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.27
 ARG UBUNTU_IMAGE=ubuntu:26.04@sha256:6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c
-ARG RUST_IMAGE=rust@sha256:edc584c5d2f915bcc5b08049987e7a492ccb8ab188444daf0a870b3ef82a3b2e
+ARG RUST_IMAGE=rust@sha256:bc2c4c21d4467cdbbac0ee7b95a6deb742a3467dfe0ff7647916c4b42ca56372
 ARG CORTIQ_REPO=https://github.com/infosave2007/cmf.git
 ARG CORTIQ_REV=811a646c42a3ffda9df02ce96acc0d03f18b8f75
 
