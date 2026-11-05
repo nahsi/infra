@@ -33,7 +33,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: cortiq
-          image: docker.io/nahsilabs/cortiq:0.8.57-nahsilabs.2@sha256:f1c7eb79832faeb59287144ce5d31cda7172b395195ba00251df194710efe33a
+          image: docker.io/nahsilabs/cortiq:0.8.58-nahsilabs.1@sha256:22497fea503c61623036a458f4fd743502f95fe6de280de60c33b59c4f12622f
           args:
             - serve
             - /models/d1-omni-2b-q8_2f.cmf
