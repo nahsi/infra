@@ -79,4 +79,24 @@ spec:
     # CNPG's instance manager inside the Postgres pod needs the Kubernetes API.
     - toEntities:
         - kube-apiserver
-    # No internet: nothing reaches `world`.
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: weknora-app-internet
+spec:
+  # Remote images in documents, URL import, web fetch. Private addresses are
+  # still refused by WeKnora's SSRF check.
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: weknora
+      app.kubernetes.io/controller: app
+  egress:
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "443"
+              protocol: TCP

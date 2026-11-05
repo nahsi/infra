@@ -131,7 +131,7 @@ spec:
 
               WEKNORA_SANDBOX_DOCKER_ENABLED: "false"
               SSRF_WHITELIST: ai.nahsi.dev,s3.nahsi.dev,auth.nahsi.dev
-              SSRF_DNS_WHITELIST_ONLY: "true"
+              SSRF_DNS_WHITELIST_ONLY: "false"
             probes:
               startup:
                 enabled: true
