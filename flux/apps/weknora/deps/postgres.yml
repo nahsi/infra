@@ -5,7 +5,7 @@ metadata:
 spec:
   instances: 1
   # ParadeDB ships pgvector and pg_search (BM25) in a CNPG-compatible image; WeKnora's default retriever needs both.
-  imageName: docker.io/paradedb/paradedb:17-v0.25.11@sha256:78d65750f0f88a56548526201bcab9910f83b90fe929cdbf979890f3f80b0f95
+  imageName: docker.io/paradedb/paradedb:18-v0.25.11@sha256:a9cbdcfd8a1c349ab21590fd6d6dcbe7da489878df6502922d032dd64c1a7ae7
   postgresUID: 999
   postgresGID: 999
   primaryUpdateStrategy: unsupervised
