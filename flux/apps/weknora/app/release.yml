@@ -196,6 +196,7 @@ spec:
               APP_HOST: weknora-app
               APP_PORT: "8080"
               MAX_FILE_SIZE_MB: "300"
+              DEFAULT_LOCALE: en-US
             resources:
               requests:
                 cpu: 20m
