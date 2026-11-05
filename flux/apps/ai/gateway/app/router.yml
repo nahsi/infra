@@ -38,9 +38,6 @@ spec:
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: qwen3-tts-ai
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
       name: realtimestt-multilingual-ai
       sectionName: transcription
     - group: gateway.networking.k8s.io
