@@ -1,0 +1,266 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: weknora
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: app-template
+      version: 5.2.1
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  values:
+    controllers:
+      app:
+        strategy: Recreate
+        containers:
+          main:
+            image:
+              repository: docker.io/wechatopenai/weknora-app
+              tag: v0.9.0@sha256:25b20959b7456f7842ef55ed4feff3694dbd0c6f8af4117c1fb3c5dec6bdf14d
+            env:
+              GIN_MODE: release
+              TZ: UTC
+              MAX_FILE_SIZE_MB: "300"
+              APP_EXTERNAL_URL: https://weknora.nahsi.dev
+
+              DB_DRIVER: postgres
+              DB_HOST: pg-weknora-rw
+              DB_PORT: "5432"
+              DB_USER:
+                valueFrom:
+                  secretKeyRef:
+                    name: pg-weknora-app
+                    key: username
+              DB_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: pg-weknora-app
+                    key: password
+              DB_NAME:
+                valueFrom:
+                  secretKeyRef:
+                    name: pg-weknora-app
+                    key: dbname
+
+              REDIS_ADDR: weknora-valkey:6379
+              REDIS_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: weknora-valkey-auth
+                    key: default
+              REDIS_DB: "0"
+              REDIS_PREFIX: "stream:"
+              STREAM_MANAGER_TYPE: redis
+
+              JWT_SECRET:
+                valueFrom:
+                  secretKeyRef:
+                    name: weknora-secret
+                    key: jwt_secret
+              SYSTEM_AES_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: weknora-secret
+                    key: system_aes_key
+              GATEWAY_API_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: weknora-secret
+                    key: gateway_api_key
+
+              DISABLE_REGISTRATION: "true"
+              OIDC_AUTH_ENABLE: "true"
+              OIDC_AUTH_PROVIDER_DISPLAY_NAME: Authentik
+              OIDC_AUTH_ISSUER_URL: https://auth.nahsi.dev/application/o/weknora/
+              OIDC_AUTH_DISCOVERY_URL: https://auth.nahsi.dev/application/o/weknora/.well-known/openid-configuration
+              OIDC_AUTH_CLIENT_ID:
+                valueFrom:
+                  secretKeyRef:
+                    name: weknora-oidc
+                    key: client_id
+              OIDC_AUTH_CLIENT_SECRET:
+                valueFrom:
+                  secretKeyRef:
+                    name: weknora-oidc
+                    key: client_secret
+              OIDC_AUTH_SCOPES: openid profile email
+              OIDC_USER_INFO_MAPPING_USER_NAME: preferred_username
+              OIDC_USER_INFO_MAPPING_EMAIL: email
+              WEKNORA_TENANT_ENABLE_RBAC: "true"
+              WEKNORA_TENANT_MAX_OWNED_PER_USER: "-1"
+
+              BUILTIN_MODELS_CONFIG: /config/builtin_models.yaml
+              RETRIEVE_DRIVER: postgres
+
+              STORAGE_TYPE: s3
+              STORAGE_ALLOW_LIST: s3
+              S3_ENDPOINT: https://s3.nahsi.dev:9000
+              S3_REGION: us-east-1
+              S3_BUCKET_NAME: weknora
+              S3_FORCE_PATH_STYLE: "true"
+              S3_ACCESS_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: weknora-s3-auth
+                    key: access_key
+              S3_SECRET_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: weknora-s3-auth
+                    key: secret_key
+
+              DOCREADER_ADDR: weknora-docreader:50051
+              DOCREADER_TRANSPORT: grpc
+              AUTO_RECOVER_DIRTY: "false"
+
+              # Limit background ingestion on the shared model server.
+              CONCURRENCY_POOL_SIZE: "2"
+              WEKNORA_ASYNQ_CORE_CONCURRENCY: "2"
+              WEKNORA_ASYNQ_POSTPROCESS_CONCURRENCY: "1"
+              WEKNORA_ASYNQ_ENRICHMENT_CONCURRENCY: "2"
+              WEKNORA_ASYNQ_MAINTENANCE_CONCURRENCY: "1"
+              WEKNORA_ASYNQ_SHARED_CONCURRENCY: "1"
+              WEKNORA_WIKI_ASYNQ_CONCURRENCY: "1"
+              WEKNORA_MODEL_MAX_CONCURRENCY: "2"
+              WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY: "2"
+              BATCH_EMBED_SIZE: "8"
+
+              WEKNORA_SANDBOX_DOCKER_ENABLED: "false"
+              SSRF_WHITELIST: ai.nahsi.dev,s3.nahsi.dev,auth.nahsi.dev
+              SSRF_DNS_WHITELIST_ONLY: "true"
+            probes:
+              startup:
+                enabled: true
+                type: HTTP
+                path: /health
+                port: 8080
+                spec:
+                  failureThreshold: 60
+                  periodSeconds: 5
+              liveness:
+                enabled: true
+                type: HTTP
+                path: /health
+                port: 8080
+              readiness:
+                enabled: true
+                type: HTTP
+                path: /health
+                port: 8080
+            resources:
+              requests:
+                cpu: 200m
+                memory: 512Mi
+              limits:
+                # A whole book holds all its extracted images in memory while they are stored.
+                memory: 6Gi
+      docreader:
+        containers:
+          main:
+            image:
+              repository: docker.io/wechatopenai/weknora-docreader
+              tag: v0.9.0@sha256:8c71ec3cc2e291829c3938d2c7dc5f921c1d10551c8774bf844c83bc4aa3cb84
+            env:
+              TZ: UTC
+              MAX_FILE_SIZE_MB: "300"
+              DOCREADER_GRPC_MAX_FILE_SIZE_MB: "300"
+              DOCREADER_GRPC_MAX_WORKERS: "1"
+              # Default is 50 images per document, which drops most figures of a whole book.
+              DOCREADER_PDF_EMBED_MAX_IMAGES: "2000"
+            probes:
+              liveness:
+                enabled: true
+                type: TCP
+                port: 50051
+              readiness:
+                enabled: true
+                type: TCP
+                port: 50051
+            resources:
+              requests:
+                cpu: 200m
+                memory: 512Mi
+              limits:
+                memory: 4Gi
+      frontend:
+        containers:
+          main:
+            image:
+              repository: docker.io/wechatopenai/weknora-ui
+              tag: v0.9.0@sha256:df26705d866997db07f3da78dabedc4f594b383566a3996810c166a5c6bee393
+            env:
+              APP_HOST: weknora-app
+              APP_PORT: "8080"
+              MAX_FILE_SIZE_MB: "300"
+            resources:
+              requests:
+                cpu: 20m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+    service:
+      app:
+        controller: app
+        ports:
+          http:
+            port: 8080
+      docreader:
+        controller: docreader
+        ports:
+          grpc:
+            port: 50051
+      frontend:
+        controller: frontend
+        ports:
+          http:
+            port: 80
+    persistence:
+      models:
+        type: configMap
+        name: weknora-models
+        advancedMounts:
+          app:
+            main:
+              - path: /config
+                readOnly: true
+    route:
+      main:
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Knowledge
+          gethomepage.dev/name: WeKnora
+          gethomepage.dev/href: https://weknora.nahsi.dev
+          gethomepage.dev/icon: mdi-book-search
+          gethomepage.dev/pod-selector: "app.kubernetes.io/name=weknora"
+        parentRefs:
+          - name: private-gateway
+            namespace: envoy-gateway
+            sectionName: https
+        hostnames:
+          - weknora.nahsi.dev
+        rules:
+          # Bypass nginx for the API so OIDC retains Envoy's HTTPS scheme.
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /api
+            timeouts:
+              request: 600s
+              backendRequest: 600s
+            backendRefs:
+              - identifier: app
+                port: 8080
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            timeouts:
+              request: 600s
+              backendRequest: 600s
+            backendRefs:
+              - identifier: frontend
+                port: 80

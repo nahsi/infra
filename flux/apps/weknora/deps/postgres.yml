@@ -1,0 +1,49 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: pg-weknora
+spec:
+  instances: 1
+  # ParadeDB ships pgvector and pg_search (BM25) in a CNPG-compatible image; WeKnora's default retriever needs both.
+  imageName: docker.io/paradedb/paradedb:17-v0.25.11@sha256:78d65750f0f88a56548526201bcab9910f83b90fe929cdbf979890f3f80b0f95
+  postgresUID: 999
+  postgresGID: 999
+  primaryUpdateStrategy: unsupervised
+  postgresql:
+    shared_preload_libraries:
+      - pg_search
+  # WeKnora's migrations update pg_search; this cluster serves only WeKnora.
+  managed:
+    roles:
+      - name: app
+        ensure: present
+        login: true
+        superuser: true
+  storage:
+    size: 10Gi
+    storageClass: ceph-rbd-delete
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 2Gi
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: app
+spec:
+  cluster:
+    name: pg-weknora
+  name: app
+  owner: app
+  extensions:
+    - name: uuid-ossp
+      ensure: present
+    - name: vector
+      ensure: present
+    - name: pg_trgm
+      ensure: present
+    - name: pg_search
+      ensure: present

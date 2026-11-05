@@ -1,0 +1,48 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: app-weknora-deps
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: infra-cloudnative-pg
+  path: ./flux/apps/weknora/deps
+  targetNamespace: weknora
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: infra
+    namespace: flux-system
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: app-weknora
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: app-weknora-deps
+    - name: infra-gateway-api-crds
+  path: ./flux/apps/weknora/app
+  targetNamespace: weknora
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: infra
+    namespace: flux-system
+  interval: 1h
+  retryInterval: 2m
+  timeout: 15m
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age

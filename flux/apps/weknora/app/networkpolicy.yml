@@ -1,0 +1,80 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: weknora-lockdown
+spec:
+  # Applies to every pod in the namespace. Anything not listed is dropped.
+  endpointSelector: {}
+
+  ingress:
+    # Users: only through the private gateway.
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: envoy-gateway
+            gateway.envoyproxy.io/owning-gateway-name: private-gateway
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "8080"
+              protocol: TCP
+    # Internal: WeKnora's own pods, the CNPG operator, metrics scraping.
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: weknora
+        - matchLabels:
+            io.kubernetes.pod.namespace: cnpg-system
+        - matchLabels:
+            io.kubernetes.pod.namespace: obs-collect
+    # Kubelet health probes.
+    - fromEntities:
+        - host
+        - remote-node
+
+  egress:
+    # DNS.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
+    # WeKnora's own pods: app, docreader, Postgres, Valkey.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: weknora
+    # Models: only via agentgateway (ai.nahsi.dev).
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: agenticgateway
+            gateway.networking.k8s.io/gateway-name: agenticgateway-internal
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+    - toFQDNs:
+        - matchName: s3.nahsi.dev
+      toPorts:
+        - ports:
+            - port: "9000"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: envoy-gateway
+            app.kubernetes.io/name: envoy
+            gateway.envoyproxy.io/owning-gateway-name: private-gateway
+      toPorts:
+        - ports:
+            - port: "10443"
+              protocol: TCP
+          serverNames:
+            - auth.nahsi.dev
+    # CNPG's instance manager inside the Postgres pod needs the Kubernetes API.
+    - toEntities:
+        - kube-apiserver
+    # No internet: nothing reaches `world`.

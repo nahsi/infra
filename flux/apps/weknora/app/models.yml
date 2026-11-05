@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: weknora-models
+data:
+  # Re-applied on every start; ${...} come from the app's environment.
+  builtin_models.yaml: |
+    builtin_models:
+      - id: qwen3-8-flash-next
+        type: KnowledgeQA
+        source: remote
+        is_default: true
+        name: Qwen/Qwen3.8-Flash-Next
+        display_name: Qwen3.8-Flash-Next
+        parameters:
+          base_url: https://ai.nahsi.dev/v1
+          api_key: ${GATEWAY_API_KEY}
+          provider: generic
+          context_window: 262144
+          supports_vision: true
+      # Keep ingestion prompts out of the shared model's prompt cache.
+      - id: qwen3-8-flash-next-ingest
+        type: KnowledgeQA
+        source: remote
+        is_default: false
+        name: Qwen/Qwen3.8-Flash-Next
+        display_name: Qwen3.8-Flash-Next (ingest)
+        parameters:
+          base_url: https://ai.nahsi.dev/v1
+          api_key: ${GATEWAY_API_KEY}
+          provider: generic
+          context_window: 262144
+          supports_vision: true
+          spec:
+            compat:
+              extra_body:
+                prompt_cache_policy: no_store
+      - id: embeddinggemma-2
+        type: Embedding
+        source: remote
+        is_default: true
+        name: google/embeddinggemma-2
+        parameters:
+          base_url: https://ai.nahsi.dev/v1
+          api_key: ${GATEWAY_API_KEY}
+          provider: openai
+          embedding_parameters:
+            dimension: 768
+            truncate_prompt_tokens: 0
+          spec:
+            input: [text, image]
+            compat:
+              image_field: image_url
+              # Keep image batches below the gateway's 16 MiB request limit.
+              max_image_batch_size: 4
+              max_image_bytes: 2000000
+              image_mime_types: [image/png, image/jpeg, image/webp]
+              input_type_field: prompt_name
+              input_type_values:
+                query: query
+                document: document
+      - id: qwen3-reranker-0-6b
+        type: Rerank
+        source: remote
+        is_default: true
+        name: Qwen/Qwen3-Reranker-0.6B
+        display_name: Qwen3-Reranker-0.6B
+        parameters:
+          base_url: https://ai.nahsi.dev/v1
+          api_key: ${GATEWAY_API_KEY}
+          provider: generic
