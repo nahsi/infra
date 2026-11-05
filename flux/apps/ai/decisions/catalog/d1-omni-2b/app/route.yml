@@ -1,0 +1,27 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ai-systemone
+spec:
+  parentRefs:
+    - name: agenticgateway-internal
+      namespace: agenticgateway
+      sectionName: https
+  hostnames:
+    - ai.nahsi.dev
+  rules:
+    - matches:
+        - method: POST
+          path:
+            type: Exact
+            value: /v1/systemone
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplaceFullPath
+              replaceFullPath: /v1/system_one
+      backendRefs:
+        - kind: Service
+          name: d1-omni-2b
+          port: 8080

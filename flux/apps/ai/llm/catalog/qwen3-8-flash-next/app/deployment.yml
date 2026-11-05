@@ -116,7 +116,7 @@ spec:
             - name: HALOGEN_CACHE_PRUNE_OLD
               value: "1"
             - name: HALOGEN_NPU_MODELS
-              value: qwen3-embedding-0.6b,embeddinggemma-2,qwen3-reranker-0.6b
+              value: qwen3-embedding-0.6b,embeddinggemma-2,qwen3-reranker-0.6b,/models/LFM3-Omni-2B
             # Skips the fabric-clock hold: BIOS 1.11 ships PMFW 100.9.0, past AMD's fix in 100.8.0 (ROCm/TheRock#8709).
             - name: HALOGEN_NPU_WITH_GPU
               value: "1"

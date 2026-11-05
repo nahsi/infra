@@ -1,0 +1,13 @@
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: qwen3-tts
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-llm
+  match:
+    model: Qwen/Qwen3-TTS
+  provider: OpenAI
+  baseURL: http://qwen3-tts.ai.svc.cluster.local:8080/v1

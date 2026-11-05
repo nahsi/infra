@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: d1-omni-2b
+  labels:
+    app.kubernetes.io/name: d1-omni-2b
+    app.kubernetes.io/part-of: cortiq
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: d1-omni-2b
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: d1-omni-2b
+        app.kubernetes.io/part-of: cortiq
+    spec:
+      automountServiceAccountToken: false
+      priorityClassName: high-priority
+      nodeSelector:
+        kubernetes.io/hostname: heliopolis
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: cortiq
+          image: docker.io/nahsilabs/cortiq:0.8.57-nahsilabs.2@sha256:f1c7eb79832faeb59287144ce5d31cda7172b395195ba00251df194710efe33a
+          args:
+            - serve
+            - /models/d1-omni-2b-q8_2f.cmf
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8080"
+          env:
+            - name: CMF_GPU
+              value: wgpu
+            - name: WGPU_BACKEND
+              value: vulkan
+            - name: VK_DRIVER_FILES
+              value: /usr/share/vulkan/icd.d/intel_icd.json
+            - name: RAYON_NUM_THREADS
+              value: "4"
+            - name: OMP_NUM_THREADS
+              value: "4"
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            requests:
+              cpu: 200m
+              memory: 6Gi
+              ephemeral-storage: 512Mi
+              gpu.intel.com/xe: "1"
+            limits:
+              cpu: "4"
+              memory: 12Gi
+              ephemeral-storage: 2Gi
+              gpu.intel.com/xe: "1"
+          startupProbe:
+            httpGet:
+              path: /v1/models
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 180
+          readinessProbe:
+            httpGet:
+              path: /v1/models
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: models
+              mountPath: /models
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: d1-omni-2b-cache
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: d1-omni-2b
+  labels:
+    app.kubernetes.io/name: d1-omni-2b
+    app.kubernetes.io/part-of: cortiq
+spec:
+  selector:
+    app.kubernetes.io/name: d1-omni-2b
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

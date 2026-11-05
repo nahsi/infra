@@ -24,6 +24,9 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: ai-llm
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-systemone
   traffic:
     apiKeyAuthentication:
       mode: Strict
@@ -36,9 +39,6 @@ metadata:
   name: ai-inference-timeouts
 spec:
   targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: qwen3-tts-ai
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: realtimestt-multilingual-ai
@@ -60,6 +60,9 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: ai-llm
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-systemone
   traffic:
     timeouts:
       request: 1800s

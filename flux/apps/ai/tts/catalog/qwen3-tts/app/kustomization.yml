@@ -4,5 +4,5 @@ resources:
   - deployment.yml
   - pvc.yml
   - route.yml
-  - policies.yml
+  - model.yml
   - networkpolicy.yml

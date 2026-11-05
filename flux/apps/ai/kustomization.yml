@@ -5,6 +5,7 @@ resources:
   - gateway
   - agents
   - llm
+  - decisions
   - retrieval
   - tts
   - stt
