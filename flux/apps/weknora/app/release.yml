@@ -19,8 +19,8 @@ spec:
         containers:
           main:
             image:
-              repository: docker.io/wechatopenai/weknora-app
-              tag: v0.9.0@sha256:25b20959b7456f7842ef55ed4feff3694dbd0c6f8af4117c1fb3c5dec6bdf14d
+              repository: docker.io/nahsilabs/weknora-app
+              tag: v0.9.0-nahsilabs.1@sha256:aa8567ce59719f76b7839613fe17899321f05d5f0c189de18c4c04c2980f4272
             env:
               GIN_MODE: release
               TZ: UTC
