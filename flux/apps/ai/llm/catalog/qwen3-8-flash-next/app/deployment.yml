@@ -51,7 +51,7 @@ spec:
               mountPath: /xrt
       containers:
         - name: halogen
-          image: ghcr.io/peonist-ai/halogen-flash-server:0.18.23@sha256:b53c96edc042b1d9570cda2771c5002527f94d6aca0c8704a4475aa621d355ff
+          image: ghcr.io/peonist-ai/halogen-flash-server:0.19.1@sha256:7ab5c3dfd77acb2387603f1807069cac3494e678f413c0670745ba2df74c0f0e
           env:
             - name: HALOGEN_DOWNLOAD
               value: peonist-ai/halogen-qwen3.8-flash-next
