@@ -1,0 +1,9 @@
+launch_url: https://books.nahsi.dev
+ui_group: Media
+offline_access: true
+redirect_uris:
+  - https://books.nahsi.dev/oauth2-callback
+  - grimmory://oauth2-callback
+allowed_groups:
+  - operators
+  - access:grimmory
