@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: nfs-grimmory-books
+  name: nfs-grimmory-library
   annotations:
     pv.kubernetes.io/provisioned-by: nfs.csi.k8s.io
 spec:
@@ -22,20 +22,20 @@ spec:
     - retrans=3
   csi:
     driver: nfs.csi.k8s.io
-    volumeHandle: nfs.lan#mnt/storage/media/books#grimmory
+    volumeHandle: nfs.lan#mnt/storage/media/library/books#grimmory
     volumeAttributes:
       server: nfs.lan
-      share: /mnt/storage/media/books
+      share: /mnt/storage/media/library/books
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: grimmory-books
+  name: grimmory-library
 spec:
   accessModes:
     - ReadWriteMany
   storageClassName: ""
-  volumeName: nfs-grimmory-books
+  volumeName: nfs-grimmory-library
   resources:
     requests:
       storage: 1Gi

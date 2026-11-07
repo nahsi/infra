@@ -57,7 +57,7 @@ spec:
 
     persistence:
       books:
-        existingClaim: grimmory-books
+        existingClaim: grimmory-library
         globalMounts:
           - path: /books
       data:
