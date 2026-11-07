@@ -1,0 +1,7 @@
+launch_url: https://readeck.nahsi.dev
+ui_group: Knowledge
+redirect_uris:
+  - https://readeck.nahsi.dev/login/oidc
+allowed_groups:
+  - operators
+  - access:readeck

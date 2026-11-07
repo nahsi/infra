@@ -26,6 +26,20 @@ spec:
               READECK_SERVER_HOST: 0.0.0.0
               READECK_USE_X_FORWARDED: "true"
               READECK_ALLOWED_HOSTS: readeck.nahsi.dev
+              READECK_AUTH_OIDC_PROVIDERS_0_NAME: Authentik
+              READECK_AUTH_OIDC_PROVIDERS_0_URL: https://auth.nahsi.dev/application/o/readeck/
+              READECK_AUTH_OIDC_PROVIDERS_0_PROVISIONING: "true"
+              READECK_AUTH_OIDC_PROVIDERS_0_GROUPS: operators=admin access:readeck=user
+              READECK_AUTH_OIDC_PROVIDERS_0_CLIENT_ID:
+                valueFrom:
+                  secretKeyRef:
+                    name: readeck-oidc
+                    key: client_id
+              READECK_AUTH_OIDC_PROVIDERS_0_CLIENT_SECRET:
+                valueFrom:
+                  secretKeyRef:
+                    name: readeck-oidc
+                    key: client_secret
               # CNPG emits a postgresql:// uri, but Readeck's driver only knows
               # postgres:// — rebuild the DSN from the secret's parts (the
               # CNPG-generated password is URL-safe). $(VAR) expands at pod
