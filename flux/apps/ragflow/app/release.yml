@@ -20,7 +20,7 @@ spec:
           main:
             image:
               repository: infiniflow/ragflow
-              tag: nightly@sha256:81c66b0d95d0fe1ecd75b688fe28e51314d17ea20888badd7898d7b694113603
+              tag: nightly@sha256:89a25fca42df065f06dda78eef8ef319b07b8849e1ad9c56f449b2fd201ead32
             args:
               - --enable-adminserver
             env:
