@@ -22,7 +22,7 @@ spec:
           main:
             image:
               repository: docker.io/nahsilabs/xberg
-              tag: 1.4.0-nahsilabs.2@sha256:e9c76901fc732a995163e32f405d3c69194ca53e0381ed4c401e4600ff40d4ec
+              tag: 1.4.0-nahsilabs.3@sha256:7e2a00019ea2c3463e4bb5d4ad6b7a5ca652bf6176e895f5ea88b7e719efd432
             args: ["serve", "--host", "0.0.0.0", "--port", "8000", "--config", "/etc/xberg/xberg.yml"]
             env:
               XBERG_MAX_CONCURRENT_REQUESTS: "2"
@@ -67,10 +67,10 @@ spec:
             resources:
               requests:
                 cpu: 100m
-                memory: 1Gi
+                memory: 3Gi
               limits:
                 cpu: "2"
-                memory: 4Gi
+                memory: 8Gi
     defaultPodOptions:
       securityContext:
         runAsNonRoot: true
