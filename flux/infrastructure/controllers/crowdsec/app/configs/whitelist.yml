@@ -1,0 +1,6 @@
+name: nahsilabs/whitelist
+description: Known clients outside private ranges
+whitelist:
+  reason: nahsilabs known clients
+  ip:
+    - 172.34.2.10

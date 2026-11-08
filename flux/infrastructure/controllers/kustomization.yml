@@ -26,3 +26,4 @@ resources:
   - grafana-operator
   - snapshot-controller
   - external-secrets
+  - crowdsec

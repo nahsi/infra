@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: crowdsec
+  labels:
+    # agent DaemonSet reads pod logs from the node's /var/log via hostPath
+    pod-security.kubernetes.io/enforce: privileged

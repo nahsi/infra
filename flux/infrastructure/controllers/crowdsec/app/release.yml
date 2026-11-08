@@ -1,0 +1,100 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: crowdsec
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: crowdsec
+      version: "0.24.3"
+      sourceRef:
+        kind: HelmRepository
+        name: crowdsec
+        namespace: flux-system
+      interval: 12h
+  valuesFrom:
+    - kind: ConfigMap
+      name: crowdsec-config
+      valuesKey: config.yaml.local
+      targetPath: config.config\.yaml\.local
+      literal: true
+    - kind: ConfigMap
+      name: crowdsec-config
+      valuesKey: envoy-json.yaml
+      targetPath: config.parsers.s01-parse.envoy-json\.yaml
+      literal: true
+    - kind: ConfigMap
+      name: crowdsec-config
+      valuesKey: nahsilabs-whitelist.yaml
+      targetPath: config.parsers.s02-enrich.nahsilabs-whitelist\.yaml
+      literal: true
+  values:
+    container_runtime: containerd
+    agent:
+      acquisition:
+        - namespace: envoy-gateway
+          podName: envoy-envoy-gateway-public-gateway-*
+          program: envoy-json
+          poll_without_inotify: true
+      env:
+        - name: COLLECTIONS
+          value: crowdsecurity/base-http-scenarios
+      resources:
+        requests:
+          cpu: 10m
+          memory: 24Mi
+        limits:
+          memory: 128Mi
+    lapi:
+      persistentVolume:
+        data:
+          enabled: false
+        config:
+          enabled: false
+      storeCAPICredentialsInSecret: true
+      storeLAPICscliCredentialsInSecret: true
+      env:
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: pg-crowdsec-app
+              key: host
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: pg-crowdsec-app
+              key: port
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: pg-crowdsec-app
+              key: dbname
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: pg-crowdsec-app
+              key: user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: pg-crowdsec-app
+              key: password
+        - name: BOUNCER_KEY_envoy
+          valueFrom:
+            secretKeyRef:
+              name: crowdsec
+              key: api-key
+        - name: ENROLL_KEY
+          valueFrom:
+            secretKeyRef:
+              name: crowdsec
+              key: ENROLL_KEY
+        - name: ENROLL_INSTANCE_NAME
+          value: nahsilabs
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 256Mi
