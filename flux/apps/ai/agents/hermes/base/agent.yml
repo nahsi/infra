@@ -195,7 +195,7 @@ spec:
       startup: *probe
     resources:
       requests:
-        cpu: "2"
+        cpu: 250m
         memory: 2Gi
       limits:
         cpu: "4"

@@ -120,7 +120,7 @@ spec:
             main:
               resources:
                 requests:
-                  cpu: "1.25"
+                  cpu: 250m
                   memory: 1.5Gi
                 limits:
                   cpu: "2"
