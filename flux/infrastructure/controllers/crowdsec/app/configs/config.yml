@@ -1,0 +1,19 @@
+db_config:
+  type: postgresql
+  host: ${DB_HOST}
+  port: ${DB_PORT}
+  db_name: ${DB_NAME}
+  user: ${DB_USER}
+  password: ${DB_PASSWORD}
+  sslmode: require
+  flush:
+    agents_autodelete:
+      login_password: 1h
+api:
+  server:
+    auto_registration:
+      enabled: true
+      token: "${REGISTRATION_TOKEN}"
+      allowed_ranges:
+        - 127.0.0.1/32
+        - 10.0.0.0/8

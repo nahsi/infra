@@ -13,73 +13,24 @@ spec:
         name: crowdsec
         namespace: flux-system
       interval: 12h
+  valuesFrom:
+    - kind: ConfigMap
+      name: crowdsec-config
+      valuesKey: config.yaml.local
+      targetPath: config.config\.yaml\.local
+      literal: true
+    - kind: ConfigMap
+      name: crowdsec-config
+      valuesKey: envoy-json.yaml
+      targetPath: config.parsers.s01-parse.envoy-json\.yaml
+      literal: true
+    - kind: ConfigMap
+      name: crowdsec-config
+      valuesKey: nahsilabs-whitelist.yaml
+      targetPath: config.parsers.s02-enrich.nahsilabs-whitelist\.yaml
+      literal: true
   values:
     container_runtime: containerd
-    config:
-      parsers:
-        s01-parse:
-          envoy-json.yaml: |
-            name: nahsilabs/envoy-json
-            description: Envoy Gateway JSON access logs (format in envoyproxy.yml)
-            filter: |
-              evt.Parsed.program == "envoy-json" &&
-              UnmarshalJSON(evt.Parsed.message, evt.Unmarshaled, "envoy") in ["", nil]
-            onsuccess: next_stage
-            statics:
-              - target: evt.StrTime
-                expression: evt.Unmarshaled.envoy.start_time
-              - parsed: request
-                expression: evt.Unmarshaled.envoy.path
-              - parsed: verb
-                expression: evt.Unmarshaled.envoy.method
-              - parsed: http_user_agent
-                expression: evt.Unmarshaled.envoy.user_agent
-              - parsed: target_fqdn
-                expression: evt.Unmarshaled.envoy.authority
-              - meta: service
-                value: http
-              - meta: log_type
-                value: http_access-log
-              - meta: source_ip
-                expression: evt.Unmarshaled.envoy.client_ip
-              - meta: http_status
-                expression: evt.Unmarshaled.envoy.status
-              - meta: http_path
-                expression: evt.Unmarshaled.envoy.path
-              - meta: http_verb
-                expression: evt.Unmarshaled.envoy.method
-              - meta: http_user_agent
-                expression: evt.Unmarshaled.envoy.user_agent
-              - meta: target_fqdn
-                expression: evt.Unmarshaled.envoy.authority
-        s02-enrich:
-          nahsilabs-whitelist.yaml: |
-            name: nahsilabs/whitelist
-            description: Known clients outside private ranges
-            whitelist:
-              reason: nahsilabs known clients
-              ip:
-                - 172.34.2.10
-      config.yaml.local: |
-        db_config:
-          type: postgresql
-          host: ${DB_HOST}
-          port: ${DB_PORT}
-          db_name: ${DB_NAME}
-          user: ${DB_USER}
-          password: ${DB_PASSWORD}
-          sslmode: require
-          flush:
-            agents_autodelete:
-              login_password: 1h
-        api:
-          server:
-            auto_registration:
-              enabled: true
-              token: "${REGISTRATION_TOKEN}"
-              allowed_ranges:
-                - 127.0.0.1/32
-                - 10.0.0.0/8
     agent:
       acquisition:
         - namespace: envoy-gateway

@@ -1,0 +1,33 @@
+name: nahsilabs/envoy-json
+description: Envoy Gateway JSON access logs (format in envoyproxy.yml)
+filter: |
+  evt.Parsed.program == "envoy-json" &&
+  UnmarshalJSON(evt.Parsed.message, evt.Unmarshaled, "envoy") in ["", nil]
+onsuccess: next_stage
+statics:
+  - target: evt.StrTime
+    expression: evt.Unmarshaled.envoy.start_time
+  - parsed: request
+    expression: evt.Unmarshaled.envoy.path
+  - parsed: verb
+    expression: evt.Unmarshaled.envoy.method
+  - parsed: http_user_agent
+    expression: evt.Unmarshaled.envoy.user_agent
+  - parsed: target_fqdn
+    expression: evt.Unmarshaled.envoy.authority
+  - meta: service
+    value: http
+  - meta: log_type
+    value: http_access-log
+  - meta: source_ip
+    expression: evt.Unmarshaled.envoy.client_ip
+  - meta: http_status
+    expression: evt.Unmarshaled.envoy.status
+  - meta: http_path
+    expression: evt.Unmarshaled.envoy.path
+  - meta: http_verb
+    expression: evt.Unmarshaled.envoy.method
+  - meta: http_user_agent
+    expression: evt.Unmarshaled.envoy.user_agent
+  - meta: target_fqdn
+    expression: evt.Unmarshaled.envoy.authority
