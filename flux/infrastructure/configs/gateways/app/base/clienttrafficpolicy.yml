@@ -3,9 +3,6 @@ kind: ClientTrafficPolicy
 metadata:
   name: gateway
 spec:
-  clientIPDetection:
-    xForwardedFor:
-      numTrustedHops: 0
   path:
     escapedSlashesAction: KeepUnchanged
   headers:
