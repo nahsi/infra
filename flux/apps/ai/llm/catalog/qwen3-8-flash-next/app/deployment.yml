@@ -31,27 +31,9 @@ spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
-      initContainers:
-        - name: xrt
-          image: docker.io/nahsilabs/xrt-npu:2.25.0@sha256:bff4fb5c7ae5b9c5ea536376170d54c05d3c857d7930ab63165d2881f6bfd085
-          command:
-            - cp
-            - -L
-            - /usr/lib/x86_64-linux-gnu/libxrt_coreutil.so.2
-            - /usr/lib/x86_64-linux-gnu/libxrt_core.so.2
-            - /usr/lib/x86_64-linux-gnu/libxrt_driver_xdna.so.2
-            - /xrt/
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-          volumeMounts:
-            - name: xrt
-              mountPath: /xrt
       containers:
         - name: halogen
-          image: ghcr.io/peonist-ai/halogen-flash-server:0.18.23@sha256:b53c96edc042b1d9570cda2771c5002527f94d6aca0c8704a4475aa621d355ff
+          image: ghcr.io/peonist-ai/halogen-flash-server:0.20.0@sha256:2d2c55a17e71f1aaf812b4e4cf0783dc5a8258461f8b3d9d7d84a9697fcfe637
           env:
             - name: HALOGEN_DOWNLOAD
               value: peonist-ai/halogen-qwen3.8-flash-next
@@ -116,7 +98,9 @@ spec:
             - name: HALOGEN_CACHE_PRUNE_OLD
               value: "1"
             - name: HALOGEN_NPU_MODELS
-              value: qwen3-embedding-0.6b,embeddinggemma-2,qwen3-reranker-0.6b,/models/LFM3-Omni-2B
+              value: qwen3-embedding-0.6b,embeddinggemma-2,qwen3-reranker-0.6b,/models/LFM3-Omni-2B,/models/OvisOCR3
+            - name: HALOGEN_WEIGHTS_LOCK
+              value: "1"
             # Skips the fabric-clock hold: BIOS 1.11 ships PMFW 100.9.0, past AMD's fix in 100.8.0 (ROCm/TheRock#8709).
             - name: HALOGEN_NPU_WITH_GPU
               value: "1"
@@ -163,12 +147,6 @@ spec:
               subPath: prompt-cache
             - name: ngram
               mountPath: /ngram
-            - name: xrt
-              mountPath: /opt/xilinx/xrt/lib
-              readOnly: true
-            - name: xrt
-              mountPath: /opt/xilinx/lib/x86_64-linux-gnu
-              readOnly: true
       volumes:
         - name: models
           persistentVolumeClaim:
@@ -176,8 +154,6 @@ spec:
         - name: ngram
           persistentVolumeClaim:
             claimName: qwen3-8-flash-next-ngram
-        - name: xrt
-          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

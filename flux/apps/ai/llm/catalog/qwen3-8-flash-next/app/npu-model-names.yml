@@ -27,3 +27,7 @@ spec:
         policy:
           request:
             body: 'toJson(json(request.body).merge({"model": "LFM3-Omni-2B", "language": "language" in json(request.body) ? json(request.body).language : "en-GB"}))'
+      - condition: request.method == "POST" && request.path == "/v1/chat/completions" && json(request.body).model == "ATH-MaaS/OvisOCR3"
+        policy:
+          request:
+            body: 'toJson(json(request.body).merge({"model": "OvisOCR3"}))'

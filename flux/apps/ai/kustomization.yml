@@ -8,5 +8,6 @@ resources:
   - decisions
   - retrieval
   - tts
+  - ocr
   - stt
   - wyoming-openai
