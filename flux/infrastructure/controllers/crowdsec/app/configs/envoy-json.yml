@@ -22,7 +22,7 @@ statics:
   - meta: source_ip
     expression: evt.Unmarshaled.envoy.client_ip
   - meta: http_status
-    expression: evt.Unmarshaled.envoy.status
+    expression: string(int(evt.Unmarshaled.envoy.status))
   - meta: http_path
     expression: evt.Unmarshaled.envoy.path
   - meta: http_verb
