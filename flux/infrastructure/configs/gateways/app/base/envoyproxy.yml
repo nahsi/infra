@@ -24,6 +24,7 @@ spec:
               upstream_host: "%UPSTREAM_HOST%"
               upstream_cluster: "%UPSTREAM_CLUSTER%"
               client_address: "%DOWNSTREAM_REMOTE_ADDRESS%"
+              client_ip: "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
               x_forwarded_for: "%REQ(X-FORWARDED-FOR)%"
               user_agent: "%REQ(USER-AGENT)%"
               request_id: "%REQ(X-REQUEST-ID)%"

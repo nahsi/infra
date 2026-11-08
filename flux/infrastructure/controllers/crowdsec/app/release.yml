@@ -19,77 +19,67 @@ spec:
       parsers:
         s01-parse:
           envoy-json.yaml: |
-            filter: "evt.Parsed.program == 'envoy-json'"
-            onsuccess: next_stage
             name: nahsilabs/envoy-json
-            description: "Envoy Gateway JSON access logs (fields from envoyproxy.yml)"
-            nodes:
-              - filter: "UnmarshalJSON(evt.Parsed.message, evt.Unmarshaled, 'envoy') in ['', nil]"
-                statics:
-                  - parsed: remote_addr
-                    expression: |
-                      let address = evt.Unmarshaled.envoy.client_address ?? '';
-                      let last_colon = lastIndexOf(address, ':');
-                      let addr = last_colon >= 0 ? address[:last_colon] : address;
-                      TrimPrefix(TrimSuffix(addr, "]"), "[")
-                  - parsed: time
-                    expression: evt.Unmarshaled.envoy.start_time
-                  - parsed: request
-                    expression: evt.Unmarshaled.envoy.path
-                  - parsed: verb
-                    expression: evt.Unmarshaled.envoy.method
-                  - parsed: status
-                    expression: evt.Unmarshaled.envoy.status
-                  - parsed: http_user_agent
-                    expression: evt.Unmarshaled.envoy.user_agent
-                  - parsed: target_fqdn
-                    expression: evt.Unmarshaled.envoy.authority
+            description: Envoy Gateway JSON access logs (format in envoyproxy.yml)
+            filter: |
+              evt.Parsed.program == "envoy-json" &&
+              UnmarshalJSON(evt.Parsed.message, evt.Unmarshaled, "envoy") in ["", nil]
+            onsuccess: next_stage
             statics:
               - target: evt.StrTime
-                expression: evt.Parsed.time
+                expression: evt.Unmarshaled.envoy.start_time
+              - parsed: request
+                expression: evt.Unmarshaled.envoy.path
+              - parsed: verb
+                expression: evt.Unmarshaled.envoy.method
+              - parsed: http_user_agent
+                expression: evt.Unmarshaled.envoy.user_agent
+              - parsed: target_fqdn
+                expression: evt.Unmarshaled.envoy.authority
               - meta: service
                 value: http
               - meta: log_type
                 value: http_access-log
               - meta: source_ip
-                expression: evt.Parsed.remote_addr
-              - meta: http_path
-                expression: evt.Parsed.request
-              - meta: http_verb
-                expression: evt.Parsed.verb
+                expression: evt.Unmarshaled.envoy.client_ip
               - meta: http_status
-                expression: evt.Parsed.status
+                expression: evt.Unmarshaled.envoy.status
+              - meta: http_path
+                expression: evt.Unmarshaled.envoy.path
+              - meta: http_verb
+                expression: evt.Unmarshaled.envoy.method
               - meta: http_user_agent
-                expression: evt.Parsed.http_user_agent
+                expression: evt.Unmarshaled.envoy.user_agent
               - meta: target_fqdn
-                expression: evt.Parsed.target_fqdn
+                expression: evt.Unmarshaled.envoy.authority
         s02-enrich:
           nahsilabs-whitelist.yaml: |
             name: nahsilabs/whitelist
-            description: "Never ban home networks"
+            description: Known clients outside private ranges
             whitelist:
-              reason: "nahsilabs known clients"
+              reason: nahsilabs known clients
               ip:
-                - "172.34.2.10"
-              cidr:
-                - "10.0.0.0/8"
+                - 172.34.2.10
       config.yaml.local: |
         db_config:
           type: postgresql
-          user: app
+          host: ${DB_HOST}
+          port: ${DB_PORT}
+          db_name: ${DB_NAME}
+          user: ${DB_USER}
           password: ${DB_PASSWORD}
-          db_name: app
-          host: pg-crowdsec-rw
-          port: 5432
           sslmode: require
+          flush:
+            agents_autodelete:
+              login_password: 1h
         api:
           server:
             auto_registration:
               enabled: true
               token: "${REGISTRATION_TOKEN}"
               allowed_ranges:
-                - "127.0.0.1/32"
-                - "10.0.0.0/8"
+                - 127.0.0.1/32
+                - 10.0.0.0/8
     agent:
       acquisition:
         - namespace: envoy-gateway
@@ -98,9 +88,7 @@ spec:
           poll_without_inotify: true
       env:
         - name: COLLECTIONS
-          value: crowdsecurity/base-http-scenarios crowdsecurity/http-cve
-        - name: PARSERS
-          value: crowdsecurity/cri-logs crowdsecurity/dateparse-enrich crowdsecurity/whitelists
+          value: crowdsecurity/base-http-scenarios
       resources:
         requests:
           cpu: 50m
@@ -116,6 +104,26 @@ spec:
       storeCAPICredentialsInSecret: true
       storeLAPICscliCredentialsInSecret: true
       env:
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: pg-crowdsec-app
+              key: host
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: pg-crowdsec-app
+              key: port
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: pg-crowdsec-app
+              key: dbname
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: pg-crowdsec-app
+              key: user
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
