@@ -49,7 +49,7 @@ terraform/             Talos cluster + cloud/external resources
 
 ## Conventions
 
-- **Model aliases** — a per-client `AgentgatewayModel` lives in the backend model's `app/aliases/<client>.yml`, named `<client>-<model-dir>`, matched as `<client>/<model-id, lowercased>` (e.g. `ragflow/qwen3.8-flash-next`).
+- **Model aliases** — a per-client `AgentgatewayModel` lives in the backend model's `app/aliases/<client>.yml`, named `<client>-<model-dir>`, matched as `<client>/<model-id, lowercased>` (e.g. `sharetab/qwen3.8-flash-next`).
 
 ## Commands
 

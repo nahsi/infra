@@ -1,0 +1,19 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: opensearch-operator
+  labels:
+    obs.nahsilabs/metrics: "true"
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: opensearch-operator
+      app.kubernetes.io/instance: opensearch-operator
+  podMetricsEndpoints:
+    - port: https
+      path: /metrics
+      scheme: https
+      interval: 30s
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tlsConfig:
+        insecureSkipVerify: true

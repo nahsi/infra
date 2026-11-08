@@ -1,0 +1,39 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: opensearch-operator
+spec:
+  chart:
+    spec:
+      chart: opensearch-operator
+      version: 3.0.14
+      sourceRef:
+        kind: HelmRepository
+        name: opensearch-operator
+        namespace: flux-system
+  interval: 1h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    installCRDs: true
+    legacyAPI:
+      enabled: false
+    manager:
+      image:
+        tag: 3.0.0@sha256:99d4fb8144cd3555dcf0c2f5a9f89b310c43293227f2244e0aad05f7343d10d9
+        pullPolicy: IfNotPresent
+      # chart default binds 127.0.0.1:8080; operator serves authenticated TLS metrics on the https:8443 port the chart already exposes
+      metricsBindAddress: ":8443"
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+          cpu: null
