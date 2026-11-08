@@ -42,10 +42,10 @@ spec:
           value: crowdsecurity/base-http-scenarios
       resources:
         requests:
-          cpu: 50m
-          memory: 128Mi
+          cpu: 10m
+          memory: 24Mi
         limits:
-          memory: 256Mi
+          memory: 128Mi
     lapi:
       persistentVolume:
         data:
