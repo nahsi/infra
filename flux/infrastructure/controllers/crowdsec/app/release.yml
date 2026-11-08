@@ -1,0 +1,141 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: crowdsec
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: crowdsec
+      version: "0.24.3"
+      sourceRef:
+        kind: HelmRepository
+        name: crowdsec
+        namespace: flux-system
+      interval: 12h
+  values:
+    container_runtime: containerd
+    config:
+      parsers:
+        s01-parse:
+          envoy-json.yaml: |
+            filter: "evt.Parsed.program == 'envoy-json'"
+            onsuccess: next_stage
+            name: nahsilabs/envoy-json
+            description: "Envoy Gateway JSON access logs (fields from envoyproxy.yml)"
+            nodes:
+              - filter: "UnmarshalJSON(evt.Parsed.message, evt.Unmarshaled, 'envoy') in ['', nil]"
+                statics:
+                  - parsed: remote_addr
+                    expression: |
+                      let address = evt.Unmarshaled.envoy.client_address ?? '';
+                      let last_colon = lastIndexOf(address, ':');
+                      let addr = last_colon >= 0 ? address[:last_colon] : address;
+                      TrimPrefix(TrimSuffix(addr, "]"), "[")
+                  - parsed: time
+                    expression: evt.Unmarshaled.envoy.start_time
+                  - parsed: request
+                    expression: evt.Unmarshaled.envoy.path
+                  - parsed: verb
+                    expression: evt.Unmarshaled.envoy.method
+                  - parsed: status
+                    expression: evt.Unmarshaled.envoy.status
+                  - parsed: http_user_agent
+                    expression: evt.Unmarshaled.envoy.user_agent
+                  - parsed: target_fqdn
+                    expression: evt.Unmarshaled.envoy.authority
+            statics:
+              - target: evt.StrTime
+                expression: evt.Parsed.time
+              - meta: service
+                value: http
+              - meta: log_type
+                value: http_access-log
+              - meta: source_ip
+                expression: evt.Parsed.remote_addr
+              - meta: http_path
+                expression: evt.Parsed.request
+              - meta: http_verb
+                expression: evt.Parsed.verb
+              - meta: http_status
+                expression: evt.Parsed.status
+              - meta: http_user_agent
+                expression: evt.Parsed.http_user_agent
+              - meta: target_fqdn
+                expression: evt.Parsed.target_fqdn
+        s02-enrich:
+          nahsilabs-whitelist.yaml: |
+            name: nahsilabs/whitelist
+            description: "Never ban home networks"
+            whitelist:
+              reason: "nahsilabs known clients"
+              ip:
+                - "172.34.2.10"
+              cidr:
+                - "10.0.0.0/8"
+      config.yaml.local: |
+        db_config:
+          type: postgresql
+          user: app
+          password: ${DB_PASSWORD}
+          db_name: app
+          host: pg-crowdsec-rw
+          port: 5432
+          sslmode: require
+        api:
+          server:
+            auto_registration:
+              enabled: true
+              token: "${REGISTRATION_TOKEN}"
+              allowed_ranges:
+                - "127.0.0.1/32"
+                - "10.0.0.0/8"
+    agent:
+      acquisition:
+        - namespace: envoy-gateway
+          podName: envoy-envoy-gateway-public-gateway-*
+          program: envoy-json
+          poll_without_inotify: true
+      env:
+        - name: COLLECTIONS
+          value: crowdsecurity/base-http-scenarios crowdsecurity/http-cve
+        - name: PARSERS
+          value: crowdsecurity/cri-logs crowdsecurity/dateparse-enrich crowdsecurity/whitelists
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 256Mi
+    lapi:
+      persistentVolume:
+        data:
+          enabled: false
+        config:
+          enabled: false
+      storeCAPICredentialsInSecret: true
+      storeLAPICscliCredentialsInSecret: true
+      env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: pg-crowdsec-app
+              key: password
+        - name: BOUNCER_KEY_envoy
+          valueFrom:
+            secretKeyRef:
+              name: crowdsec
+              key: api-key
+        - name: ENROLL_KEY
+          valueFrom:
+            secretKeyRef:
+              name: crowdsec
+              key: ENROLL_KEY
+        - name: ENROLL_INSTANCE_NAME
+          value: nahsilabs
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 256Mi

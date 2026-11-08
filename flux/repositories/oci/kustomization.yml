@@ -11,3 +11,4 @@ resources:
   - envoy-gateway.yml
   - prometheus.yml
   - agenticgateway.yml
+  - envoy-proxy-bouncer.yml

@@ -26,3 +26,4 @@ resources:
   - grafana-community.yml
   - browsertrix.yml
   - opensearch-operator.yml
+  - crowdsec.yml

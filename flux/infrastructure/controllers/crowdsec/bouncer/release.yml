@@ -1,0 +1,27 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: crowdsec-envoy-bouncer
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: envoy-proxy-bouncer
+    namespace: flux-system
+  values:
+    fullnameOverride: crowdsec-envoy-bouncer
+    config:
+      exemptIPs:
+        - 10.0.0.0/8
+        - 172.34.2.10/32
+      bouncer:
+        lapiURL: http://crowdsec-service.crowdsec.svc.cluster.local:8080
+        apiKeySecretRef:
+          name: crowdsec-bouncer
+          key: api-key
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
