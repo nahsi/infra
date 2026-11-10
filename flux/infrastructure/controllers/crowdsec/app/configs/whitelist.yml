@@ -1,6 +1,8 @@
 name: nahsilabs/whitelist
-description: Known clients outside private ranges
+description: Known clients outside private ranges and accepted Matrix API traffic
 whitelist:
-  reason: nahsilabs known clients
+  reason: nahsilabs known clients or accepted Matrix API request
   ip:
     - 172.34.2.10
+  expression:
+    - evt.Meta.http_path startsWith '/_matrix/' && evt.Meta.http_status matches '^[23]'
