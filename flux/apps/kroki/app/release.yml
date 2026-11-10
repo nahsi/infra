@@ -18,7 +18,7 @@ spec:
       registry: docker.io
       repository: yuzutech/kroki
       # renovate: datasource=github-releases depName=yuzutech/kroki
-      tag: 0.32.1@sha256:6980bfb218b48b74ea14b888d9c7e8c032d1cb6325f3292277abdf62483abd9d
+      tag: 0.36.0@sha256:de0f2fdc42e926d54706ac962aa5cfb38c5c387035a1b30d07ce297bbc37057b
 
     ingress:
       enabled: false
@@ -45,7 +45,7 @@ spec:
         registry: docker.io
         repository: yuzutech/kroki-diagramsnet
         # renovate: datasource=github-releases depName=yuzutech/kroki
-        tag: 0.32.1@sha256:71e7082f736ec003fb33b5cd1c5c40af54c9bfb6351d50fbe73b56fe8f1bd5eb
+        tag: 0.36.0@sha256:d6a143ae0ac3b1bbdee3ca0e35439c338d66d4756d82e75b54bb1c75f8b4e077
       resources:
         requests:
           cpu: 10m
@@ -59,7 +59,7 @@ spec:
         registry: docker.io
         repository: yuzutech/kroki-excalidraw
         # renovate: datasource=github-releases depName=yuzutech/kroki
-        tag: 0.32.1@sha256:214f13c1cd3c3f79a18a83631a900fedbed71b2f39d3a0c5630ac5fa5ad40046
+        tag: 0.36.0@sha256:5d32b0fd58b311bf19ac1b1c7c779e003007638f501a05d1f57fa4a5e129856a
       resources:
         requests:
           cpu: 50m
@@ -73,7 +73,7 @@ spec:
         registry: docker.io
         repository: yuzutech/kroki-mermaid
         # renovate: datasource=github-releases depName=yuzutech/kroki
-        tag: 0.32.1@sha256:ad6721646aabfb8b5f5005db2daa6e37189c25e18aab19a8ef8590b6171cd192
+        tag: 0.36.0@sha256:0f9d9420d2577474f20909bb0679d398949561d5d88435e66e742b28db066bd2
       resources:
         requests:
           cpu: 10m
