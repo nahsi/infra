@@ -19,7 +19,7 @@ spec:
           main:
             image:
               repository: quay.io/invidious/invidious
-              tag: master@sha256:37f4544aba81ad792ff308f1001a673ce224ee86ce5e69421afe535534c9b791
+              tag: master@sha256:74c575e2a2064efa63416b1edc6c14da3f6d08ce6ef27616536a55ff5565a72e
             env:
               INVIDIOUS_CONFIG: |
                 domain: iv.nahsi.dev
