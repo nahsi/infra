@@ -33,7 +33,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: halogen
-          image: ghcr.io/peonist-ai/halogen-flash-server:0.20.1@sha256:66dac8dac25bf15f2b63a684bbe3953036045172d881525600ea41d45e5acc73
+          image: ghcr.io/peonist-ai/halogen-flash-server:0.20.4@sha256:70445bcf7acff8f1fe11396a97b866ed30dca31caf5fac62049127658080e07f
           env:
             - name: HALOGEN_DOWNLOAD
               value: peonist-ai/halogen-qwen3.8-flash-next
