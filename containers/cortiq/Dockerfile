@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.27
+# syntax=docker/dockerfile:1.29
 ARG UBUNTU_IMAGE=ubuntu:26.04@sha256:065aa8626841f16057b78b027b464cd59c4fac36c204c72dcbf48d66f5fa8a96
 ARG RUST_IMAGE=rust@sha256:0b0ea86881537b3f645aace7e8e39556289f8787db057317c8d4978548213b9e
 ARG CORTIQ_REPO=https://github.com/nahsi/cmf.git
