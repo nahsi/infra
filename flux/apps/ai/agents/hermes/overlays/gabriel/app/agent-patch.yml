@@ -113,7 +113,7 @@ spec:
         existingClaim: gabriel-home
   initContainers:
     - name: telegram-volume-permissions
-      image: &telegram-image docker.io/aiogram/telegram-bot-api:latest@sha256:e43cfd2c0b85f7eef26bde0635a7dee3438adb28299004c3b6f75109251b5e83
+      image: &telegram-image docker.io/aiogram/telegram-bot-api:latest@sha256:de3f5bc415ace8fcead325ad22264f6b8639db4c45fa60c91c4d607e0dc45fc7
       command: ["chown", "10000:10000", "/var/lib/telegram-bot-api"]
       securityContext:
         runAsUser: 0
