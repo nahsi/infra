@@ -27,7 +27,7 @@ spec:
           main:
             image:
               repository: docker.io/chocobozzz/peertube
-              tag: v8.3.2@sha256:4e42ed326723a18736a794d7ded9630ae0a6a204f2bb0c8a9d3b9a756d7c0678
+              tag: v8.3.2@sha256:350d5d55d45dc6a81e34f2dc996c7a22ec6b43793b43597972c521c477c63da8
 
             command:
               - /bin/sh
