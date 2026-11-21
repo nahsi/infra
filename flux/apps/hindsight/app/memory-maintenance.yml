@@ -24,7 +24,7 @@ spec:
               type: RuntimeDefault
           containers:
             - name: maintenance
-              image: ghcr.io/vectorize-io/hindsight-api:1.1.0-slim@sha256:b97af4787f35f0f897cc85299e1c800e265ff98e1d70c900c58a7f9903cb5b7d
+              image: ghcr.io/vectorize-io/hindsight-api:1.2.1-slim@sha256:084af5a6522d67f5905f7992cdb3d910d778496e5dd2566caec7cf82ed2e7d8c
               command: ["python", "/scripts/memory-maintenance.py"]
               env:
                 - name: HINDSIGHT_API_URL
