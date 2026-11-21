@@ -21,7 +21,7 @@ spec:
           main:
             image:
               repository: ghcr.io/home-operations/prowlarr
-              tag: 2.6.6.5717@sha256:8ead2b6f1b5d744fc52849d455896809b2d290f2b78b05f1b3fb21f410866b58
+              tag: 3.0.2.5777@sha256:ff3e486e1e4c4a696daf3e69ce5ebec19539dd6aa4420a2a17ab3ddaf0cfd2d8
 
             env:
               TZ: Europe/Athens
