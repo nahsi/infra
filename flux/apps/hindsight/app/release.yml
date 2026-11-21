@@ -198,7 +198,7 @@ spec:
           main:
             image:
               repository: ghcr.io/vectorize-io/hindsight-control-plane
-              tag: 1.1.0@sha256:373f86848649a8dadc9b2d9ecf1d18b4c446162ca7b556fc4152e92ef433e983
+              tag: 1.2.1@sha256:74a113e1f02ace9e8feed954e6b42282e9e3d33b7e0b6d528158d05902552a9a
 
             env:
               NODE_ENV: production
