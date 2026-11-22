@@ -61,7 +61,7 @@ spec:
               effect: NoSchedule
         metricsExporter:
           enable: true
-          image: docker.io/rocm/device-metrics-exporter:v1.5.3
+          image: docker.io/rocm/device-metrics-exporter:v1.5.4
           resource:
             requests:
               cpu: 50m
