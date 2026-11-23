@@ -33,12 +33,13 @@ resource "adguard_rewrite" "truenas" {
   answer = "10.2.10.41"
 }
 
-resource "cloudflare_record" "vpn" {
-  zone_id = data.cloudflare_zone.nahsi.zone_id
-  name    = "vpn.nahsi.dev"
-  content = "37.98.199.180"
-  type    = "A"
-}
+# Disabled: the old public range is gone after the move.
+# resource "cloudflare_record" "vpn" {
+#   zone_id = data.cloudflare_zone.nahsi.zone_id
+#   name    = "vpn.nahsi.dev"
+#   content = "37.98.199.180"
+#   type    = "A"
+# }
 
 resource "adguard_rewrite" "vpn" {
   domain = "vpn.nahsi.dev"

@@ -14,17 +14,19 @@ spec:
       selector:
         matchLabels:
           cilium-bgp-public: "true"
----
-apiVersion: "cilium.io/v2alpha1"
-kind: CiliumLoadBalancerIPPool
-metadata:
-  name: "public-ip-pool"
-  labels:
-    cilium-bgp-public: "true"
-spec:
-  blocks:
-    - start: "37.98.199.181"
-    - start: "37.98.199.182"
-  serviceSelector:
-    matchLabels:
-      cilium-bgp-public: "true"
+# Public IP pool disabled: the old 37.98.199.176/28 (HCN) range is gone after the move.
+# Restore with the new range once available.
+# ---
+# apiVersion: "cilium.io/v2alpha1"
+# kind: CiliumLoadBalancerIPPool
+# metadata:
+#   name: "public-ip-pool"
+#   labels:
+#     cilium-bgp-public: "true"
+# spec:
+#   blocks:
+#     - start: "37.98.199.181"
+#     - start: "37.98.199.182"
+#   serviceSelector:
+#     matchLabels:
+#       cilium-bgp-public: "true"

@@ -106,27 +106,28 @@ spec:
             portRange:
               start: 12000
               end: 12031
-      public:
-        controller: main
-        forceRename: rustpbx-public
-        type: LoadBalancer
-        externalTrafficPolicy: Local
-        labels:
-          cilium-bgp-public: "true"
-        annotations:
-          external-dns.kubernetes.io/hostname: rustpbx.nahsi.dev
-          external-dns.kubernetes.io/ttl: "300"
-          external-dns.kubernetes.io/cloudflare-proxied: "false"
-          lbipam.cilium.io/ips: "37.98.199.181"
-        ports:
-          sip-tls:
-            port: 5061
-            protocol: TCP
-          rtp:
-            protocol: UDP
-            portRange:
-              start: 12000
-              end: 12031
+      # Public SIP/RTP endpoint disabled: no public IP range after the move.
+      # public:
+      #   controller: main
+      #   forceRename: rustpbx-public
+      #   type: LoadBalancer
+      #   externalTrafficPolicy: Local
+      #   labels:
+      #     cilium-bgp-public: "true"
+      #   annotations:
+      #     external-dns.kubernetes.io/hostname: rustpbx.nahsi.dev
+      #     external-dns.kubernetes.io/ttl: "300"
+      #     external-dns.kubernetes.io/cloudflare-proxied: "false"
+      #     lbipam.cilium.io/ips: "37.98.199.181"
+      #   ports:
+      #     sip-tls:
+      #       port: 5061
+      #       protocol: TCP
+      #     rtp:
+      #       protocol: UDP
+      #       portRange:
+      #         start: 12000
+      #         end: 12031
 
     secrets:
       config:
@@ -138,8 +139,7 @@ spec:
             ssl_private_key = "/certs/tls.key"
             log_level = "info"
             database_url = {{ .Values.global.rustpbx.databaseUrl | quote }}
-            external_ip = {{ index .Values.service.public.annotations "lbipam.cilium.io/ips" | quote }}
-            sip_external_ip = {{ index .Values.service.public.annotations "lbipam.cilium.io/ips" | quote }}
+            # external_ip and sip_external_ip disabled with the public service (set both to its LB IP).
             contact_lan_use_bind = false
             rtp_start_port = {{ .Values.service.main.ports.rtp.portRange.start }}
             rtp_end_port = {{ .Values.service.main.ports.rtp.portRange.end }}
