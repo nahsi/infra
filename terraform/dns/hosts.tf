@@ -32,3 +32,8 @@ resource "adguard_rewrite" "vyos" {
   domain = "vyos.local"
   answer = "10.2.1.1"
 }
+
+resource "adguard_rewrite" "slzb" {
+  domain = "slzb.local"
+  answer = "10.2.10.5"
+}

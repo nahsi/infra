@@ -157,6 +157,11 @@ spec:
                 icon: home-assistant
                 href: https://ha.nahsi.dev
                 ping: https://ha.nahsi.dev
+            - SLZB-MR4U:
+                icon: mdi-zigbee
+                href: http://slzb.local/
+                ping: http://slzb.local/
+                description: Zigbee + Thread coordinator
 
         - Telephony:
             - LiveKit:
