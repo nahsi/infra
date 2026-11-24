@@ -1,0 +1,7 @@
+launch_url: https://z2m.nahsi.dev
+ui_group: Platform
+offline_access: true
+redirect_uris:
+  - https://z2m.nahsi.dev/oauth2/callback
+allowed_groups:
+  - operators

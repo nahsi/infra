@@ -1,0 +1,18 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: zigbee2mqtt
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: zigbee2mqtt
+  oidc:
+    provider:
+      issuer: https://auth.nahsi.dev/application/o/zigbee2mqtt/
+    clientIDRef:
+      name: zigbee2mqtt-oidc
+    clientSecret:
+      name: zigbee2mqtt-oidc
+    scopes:
+      - offline_access

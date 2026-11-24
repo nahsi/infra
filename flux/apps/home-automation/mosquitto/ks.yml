@@ -36,6 +36,7 @@ spec:
   path: ./flux/apps/home-automation/mosquitto/app
   targetNamespace: home-automation
   prune: true
+  wait: true
   sourceRef:
     kind: GitRepository
     name: infra
