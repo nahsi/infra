@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: mosquitto
+spec:
+  secretName: mosquitto-tls
+  secretTemplate:
+    labels:
+      reconcile.fluxcd.io/watch: Enabled
+  issuerRef:
+    kind: ClusterIssuer
+    name: nahsi.dev
+  dnsNames:
+    - mqtt.nahsi.dev
