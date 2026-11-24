@@ -1,0 +1,139 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: zigbee2mqtt
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: app-template
+      version: 5.2.1
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  values:
+    defaultPodOptions:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: {type: RuntimeDefault}
+
+    controllers:
+      main:
+        type: deployment
+        replicas: 1
+        strategy: Recreate
+        containers:
+          main:
+            image:
+              repository: ghcr.io/koenkk/zigbee2mqtt
+              tag: 2.14.3
+            env:
+              TZ: Europe/Athens
+              Z2M_ONBOARD_NO_SERVER: "1"
+              ZIGBEE2MQTT_CONFIG_MQTT_SERVER: mqtt://mosquitto:1883
+              ZIGBEE2MQTT_CONFIG_MQTT_VERSION: "5"
+              ZIGBEE2MQTT_CONFIG_MQTT_USER: zigbee2mqtt
+              ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: mosquitto-auth
+                    key: zigbee2mqtt
+              ZIGBEE2MQTT_CONFIG_SERIAL_PORT: tcp://slzb.local:7638
+              ZIGBEE2MQTT_CONFIG_SERIAL_ADAPTER: zstack
+              ZIGBEE2MQTT_CONFIG_SERIAL_BAUDRATE: "115200"
+              ZIGBEE2MQTT_CONFIG_ADVANCED_CHANNEL: "25"
+              ZIGBEE2MQTT_CONFIG_ADVANCED_PAN_ID:
+                valueFrom:
+                  secretKeyRef:
+                    name: zigbee2mqtt-network
+                    key: pan-id
+              ZIGBEE2MQTT_CONFIG_ADVANCED_EXT_PAN_ID:
+                valueFrom:
+                  secretKeyRef:
+                    name: zigbee2mqtt-network
+                    key: ext-pan-id
+              ZIGBEE2MQTT_CONFIG_ADVANCED_NETWORK_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: zigbee2mqtt-network
+                    key: network-key
+              ZIGBEE2MQTT_CONFIG_ADVANCED_LOG_OUTPUT: '["console"]'
+              ZIGBEE2MQTT_CONFIG_AVAILABILITY_ENABLED: "true"
+              ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_ENABLED: "true"
+              ZIGBEE2MQTT_CONFIG_FRONTEND_ENABLED: "true"
+              ZIGBEE2MQTT_CONFIG_FRONTEND_PORT: "8080"
+              ZIGBEE2MQTT_CONFIG_FRONTEND_URL: https://z2m.nahsi.dev
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: [ALL]
+            resources:
+              requests:
+                cpu: 10m
+                memory: 128Mi
+              limits:
+                memory: 512Mi
+            probes:
+              liveness: &probe
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: 8080
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+              readiness: *probe
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: 8080
+                  periodSeconds: 5
+                  timeoutSeconds: 5
+                  failureThreshold: 30
+
+    service:
+      main:
+        controller: main
+        ports:
+          http:
+            port: 8080
+
+    route:
+      main:
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Home Automation
+          gethomepage.dev/name: Zigbee2MQTT
+          gethomepage.dev/icon: zigbee2mqtt.png
+          gethomepage.dev/pod-selector: "app.kubernetes.io/name=zigbee2mqtt"
+        parentRefs:
+          - name: private-gateway
+            namespace: envoy-gateway
+            sectionName: https
+        hostnames:
+          - z2m.nahsi.dev
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - identifier: main
+                port: http
+
+    persistence:
+      data:
+        existingClaim: zigbee2mqtt-data
+        globalMounts:
+          - path: /app/data

@@ -89,6 +89,10 @@ spec:
             tab: Systems
             style: columns
             columns: 3
+          Home Automation:
+            tab: Systems
+            style: columns
+            columns: 3
 
       widgets:
         - search:
@@ -137,11 +141,6 @@ spec:
                 icon: wireguard
                 href: http://vpn.nahsi.dev
                 ping: http://vpn.nahsi.dev
-            - SLZB-MR4U:
-                icon: mdi-zigbee
-                href: http://slzb.local/
-                ping: http://slzb.local/
-                description: Zigbee + Thread coordinator
 
         - Observability:
             - Scrutiny:
@@ -176,3 +175,10 @@ spec:
                 icon: mdi-phone-classic
                 href: http://10.2.10.9/
                 description: HT801 V2 adapter administration
+
+        - Home Automation:
+            - SLZB-MR4U:
+                icon: mdi-zigbee
+                href: http://slzb.local/
+                ping: http://slzb.local/
+                description: Zigbee + Thread coordinator

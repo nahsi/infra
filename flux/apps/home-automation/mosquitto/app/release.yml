@@ -1,0 +1,136 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: mosquitto
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: app-template
+      version: 5.2.1
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  valuesFrom:
+    - kind: Secret
+      name: mosquitto-tls
+      valuesKey: tls.crt
+      targetPath: global.mosquitto.certificate
+      literal: true
+    - kind: Secret
+      name: mosquitto-auth
+      valuesKey: passwd
+      targetPath: global.mosquitto.passwd
+      literal: true
+  values:
+    defaultPodOptions:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 1883
+        runAsGroup: 1883
+        runAsNonRoot: true
+        fsGroup: 1883
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: {type: RuntimeDefault}
+
+    controllers:
+      main:
+        type: deployment
+        replicas: 1
+        strategy: Recreate
+        pod:
+          annotations:
+            checksum/credentials: '{{ .Values.global.mosquitto | toJson | sha256sum }}'
+        containers:
+          main:
+            image:
+              repository: docker.io/library/eclipse-mosquitto
+              tag: 2.1.4-alpine
+            env:
+              TZ: Europe/Athens
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: [ALL]
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
+            probes:
+              liveness: &probe
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 1883
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+              readiness: *probe
+
+    service:
+      main:
+        controller: main
+        forceRename: mosquitto
+        ports:
+          mqtt:
+            port: 1883
+      lan:
+        controller: main
+        forceRename: mosquitto-lan
+        type: LoadBalancer
+        labels:
+          cilium-bgp-private: "true"
+        annotations:
+          external-dns.kubernetes.io/hostname: mqtt.nahsi.dev
+        ports:
+          mqtts:
+            port: 8883
+
+    configMaps:
+      config:
+        data:
+          mosquitto.conf: |
+            persistence true
+            persistence_location /mosquitto/data/
+
+            allow_anonymous false
+            global_plugin /usr/lib/mosquitto_password_file.so
+            plugin_opt_password_file /mosquitto/config/passwd
+
+            listener 1883
+
+            listener 8883
+            certfile /tls/tls.crt
+            keyfile /tls/tls.key
+
+    persistence:
+      config:
+        type: configMap
+        identifier: config
+        globalMounts:
+          - path: /mosquitto/config/mosquitto.conf
+            subPath: mosquitto.conf
+            readOnly: true
+      auth:
+        type: secret
+        name: mosquitto-auth
+        defaultMode: 0440
+        globalMounts:
+          - path: /mosquitto/config/passwd
+            subPath: passwd
+            readOnly: true
+      tls:
+        type: secret
+        name: mosquitto-tls
+        defaultMode: 0440
+        globalMounts:
+          - path: /tls
+            readOnly: true
+      data:
+        existingClaim: mosquitto-data
+        globalMounts:
+          - path: /mosquitto/data
