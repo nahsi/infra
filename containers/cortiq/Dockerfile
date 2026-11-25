@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.27
 ARG UBUNTU_IMAGE=ubuntu:26.04@sha256:d66b366dac61b575bee2aef07e9c26e8070096fbe84a3d4d3eb0da069b5d76db
-ARG RUST_IMAGE=rust@sha256:1f65e0abcce9b449f9533df5994f2a62391059196c481a09b8e1b522dd6d75af
+ARG RUST_IMAGE=rust@sha256:e84068000361bf3d4a5ba2b7647f62893528b1eb9f847d7a23b493f5ce8ea254
 ARG CORTIQ_REPO=https://github.com/nahsi/cmf.git
 ARG CORTIQ_REV=0d02ff228527eebaed81eade81dbb870038de5b2
 
