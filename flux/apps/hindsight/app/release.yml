@@ -24,7 +24,7 @@ spec:
           main:
             image:
               repository: ghcr.io/vectorize-io/hindsight-api
-              tag: 1.1.0-slim@sha256:b97af4787f35f0f897cc85299e1c800e265ff98e1d70c900c58a7f9903cb5b7d
+              tag: 1.3.0-slim@sha256:600ec51eefedd499e357cb84ece860a8f656fef62a22080e854498fb3971bb7e
 
             env:
               HINDSIGHT_API_PORT: "8888"
