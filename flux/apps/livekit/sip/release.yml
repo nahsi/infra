@@ -50,7 +50,7 @@ spec:
           main:
             image:
               repository: docker.io/livekit/sip
-              tag: v1.20.0@sha256:e675638b7678eadb19d48c7a8865149d1b7c23a95b2e3c6fae173684d70c62fc
+              tag: v1.26.0@sha256:62e8eca8b852ce39a93671431d7a43927dbc011935def6bf722e7ed706916f8c
             command: ["livekit-sip"]
             args: ["--config=/run/livekit-sip/config.yaml"]
             probes:
