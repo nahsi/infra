@@ -116,7 +116,7 @@ spec:
         delegation:
           max_concurrent_children: 2
           provider: openai-codex
-          model: gpt-6.1-sol
+          model: gpt-6.2-sol
           reasoning_effort: low
           fallback_providers: []
         kanban:
