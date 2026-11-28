@@ -21,7 +21,7 @@ spec:
           main:
             image:
               repository: ghcr.io/fastcrw/crw
-              tag: 0.39.1@sha256:69e9f2d1b3b78dea056cfd5178b174a925bc58889b99cc41ccae9665bc335ff4
+              tag: 0.49.3@sha256:72f5d62aa8c8454feb4f78b6f37a1838ba1b4e257d94bdd56fb821f1be314707
             env:
               HOME: /tmp
             envFrom:
